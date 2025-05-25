@@ -30,6 +30,7 @@ from llama_stack.distribution.client import get_client_impl
 from llama_stack.distribution.datatypes import (
     AutoRoutedProviderSpec,
     Provider,
+    ReplayProviderSpec,
     RoutingTableProviderSpec,
     StackRunConfig,
 )
@@ -260,6 +261,9 @@ async def instantiate_providers(
         inner_impls = {}
         if isinstance(provider.spec, RoutingTableProviderSpec):
             inner_impls = inner_impls_by_provider_id[f"inner-{provider.spec.router_api.value}"]
+        elif isinstance(provider.spec, ReplayProviderSpec):
+            # Replay providers need access to inner implementations for their API
+            inner_impls = inner_impls_by_provider_id.get(f"inner-{provider.spec.api.value}", {})
 
         impl = await instantiate_provider(provider, deps, inner_impls, dist_registry, run_config)
 
@@ -337,6 +341,12 @@ async def instantiate_provider(
 
         config = None
         args = [provider_spec.api, inner_impls, deps, dist_registry]
+    elif isinstance(provider_spec, ReplayProviderSpec):
+        method = "get_replay_provider_impl"
+
+        config_type = instantiate_class_type(provider_spec.config_class)
+        config = config_type(**provider.config)
+        args = [provider_spec.api, config, inner_impls, deps]
     else:
         method = "get_provider_impl"
 

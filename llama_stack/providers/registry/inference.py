@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 
+from llama_stack.distribution.datatypes import ReplayProviderSpec
 from llama_stack.providers.datatypes import (
     AdapterSpec,
     Api,
@@ -305,5 +306,9 @@ def available_providers() -> list[ProviderSpec]:
                 config_class="llama_stack.providers.remote.inference.watsonx.WatsonXConfig",
                 provider_data_validator="llama_stack.providers.remote.inference.watsonx.WatsonXProviderDataValidator",
             ),
+        ),
+        # Replay provider for caching any inference provider
+        ReplayProviderSpec(
+            api=Api.inference,
         ),
     ]

@@ -1,0 +1,30 @@
+version: '2'
+image_name: example-with-replay
+apis:
+- inference
+
+providers:
+  inference:
+  # First, configure the real provider
+  - provider_id: fireworks
+    provider_type: remote::fireworks
+    config:
+      url: https://api.fireworks.ai/inference/v1
+      api_key: ${env.FIREWORKS_API_KEY}
+  
+  # Then, configure the replay provider to wrap it
+  - provider_id: __replay__
+    provider_type: replay
+    config:
+      real_provider_id: fireworks
+      mode: cache_only  # or cache_with_fallback
+      cache_dir: ~/.llama_stack_cache
+
+# Optional: Add models that the providers support
+models:
+- model_id: meta-llama/Llama-3.1-8B-Instruct
+  provider_id: fireworks  # This will be routed through the replay provider
+  model_type: llm
+
+server:
+  port: 8321 

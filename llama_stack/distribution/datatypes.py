@@ -189,6 +189,19 @@ class RoutingTableProviderSpec(ProviderSpec):
     pip_packages: list[str] = Field(default_factory=list)
 
 
+# Replay provider that wraps another provider with caching
+class ReplayProviderSpec(ProviderSpec):
+    provider_type: str = "replay"
+    config_class: str = "llama_stack.providers.utils.replay.ReplayProviderConfig"
+    module: str = "llama_stack.providers.utils.replay"
+    pip_packages: list[str] = Field(default_factory=list)
+    container_image: str | None = None
+
+    @property
+    def is_replay_provider(self) -> bool:
+        return True
+
+
 class DistributionSpec(BaseModel):
     description: str | None = Field(
         default="",
