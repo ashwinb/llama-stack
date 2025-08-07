@@ -9,11 +9,14 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 from openai import AsyncStream
-from openai.types.chat.chat_completion import (
-    Choice as OpenAIChoice,
-)
-from openai.types.completion import Completion as OpenAICompletion
-from openai.types.completion_choice import Logprobs as OpenAICompletionLogprobs
+import openai.types.chat.chat_completion as openai_completion
+import openai.types.completion as openai_base_completion
+import openai.types.completion_choice as openai_completion_choice
+
+# Type aliases using the imported modules
+OpenAIChoice = openai_completion.Choice
+OpenAICompletion = openai_base_completion.Completion
+OpenAICompletionLogprobs = openai_completion_choice.Logprobs
 
 from llama_stack.apis.inference import (
     ChatCompletionRequest,

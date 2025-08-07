@@ -9,9 +9,10 @@ from typing import Any
 
 import httpx
 from openai import APIConnectionError, AsyncOpenAI
-from openai.types.chat.chat_completion_chunk import (
-    ChatCompletionChunk as OpenAIChatCompletionChunk,
-)
+import openai.types.chat.chat_completion_chunk as openai_chunk
+
+# Type aliases using the imported module
+OpenAIChatCompletionChunk = openai_chunk.ChatCompletionChunk
 
 from llama_stack.apis.common.content_types import (
     InterleavedContent,

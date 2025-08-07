@@ -16,63 +16,32 @@ from typing import (
 )
 
 from openai import AsyncStream
-from openai.types.chat import (
-    ChatCompletionAssistantMessageParam as OpenAIChatCompletionAssistantMessage,
-)
-from openai.types.chat import (
-    ChatCompletionChunk as OpenAIChatCompletionChunk,
-)
-from openai.types.chat import (
-    ChatCompletionContentPartImageParam as OpenAIChatCompletionContentPartImageParam,
-)
-from openai.types.chat import (
-    ChatCompletionContentPartParam as OpenAIChatCompletionContentPartParam,
-)
-from openai.types.chat import (
-    ChatCompletionContentPartTextParam as OpenAIChatCompletionContentPartTextParam,
-)
-from openai.types.chat import (
-    ChatCompletionMessageParam as OpenAIChatCompletionMessage,
-)
-from openai.types.chat import (
-    ChatCompletionMessageToolCall,
-)
-from openai.types.chat import (
-    ChatCompletionMessageToolCallParam as OpenAIChatCompletionMessageToolCall,
-)
-from openai.types.chat import (
-    ChatCompletionSystemMessageParam as OpenAIChatCompletionSystemMessage,
-)
-from openai.types.chat import (
-    ChatCompletionToolMessageParam as OpenAIChatCompletionToolMessage,
-)
-from openai.types.chat import (
-    ChatCompletionUserMessageParam as OpenAIChatCompletionUserMessage,
-)
-from openai.types.chat.chat_completion import (
-    Choice as OpenAIChoice,
-)
-from openai.types.chat.chat_completion import (
-    ChoiceLogprobs as OpenAIChoiceLogprobs,  # same as chat_completion_chunk ChoiceLogprobs
-)
-from openai.types.chat.chat_completion_chunk import (
-    Choice as OpenAIChatCompletionChunkChoice,
-)
-from openai.types.chat.chat_completion_chunk import (
-    ChoiceDelta as OpenAIChoiceDelta,
-)
-from openai.types.chat.chat_completion_chunk import (
-    ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
-)
-from openai.types.chat.chat_completion_chunk import (
-    ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
-)
-from openai.types.chat.chat_completion_content_part_image_param import (
-    ImageURL as OpenAIImageURL,
-)
-from openai.types.chat.chat_completion_message_tool_call_param import (
-    Function as OpenAIFunction,
-)
+import openai.types.chat as openai_chat
+import openai.types.chat.chat_completion as openai_completion
+import openai.types.chat.chat_completion_chunk as openai_chunk
+import openai.types.chat.chat_completion_content_part_image_param as openai_image_param
+import openai.types.chat.chat_completion_message_tool_call_param as openai_tool_call_param
+
+# Type aliases using the imported modules
+OpenAIChatCompletionAssistantMessage = openai_chat.ChatCompletionAssistantMessageParam
+OpenAIChatCompletionChunk = openai_chat.ChatCompletionChunk
+OpenAIChatCompletionContentPartImageParam = openai_chat.ChatCompletionContentPartImageParam
+OpenAIChatCompletionContentPartParam = openai_chat.ChatCompletionContentPartParam
+OpenAIChatCompletionContentPartTextParam = openai_chat.ChatCompletionContentPartTextParam
+OpenAIChatCompletionMessage = openai_chat.ChatCompletionMessageParam
+ChatCompletionMessageToolCall = openai_chat.ChatCompletionMessageToolCall
+OpenAIChatCompletionMessageToolCall = openai_chat.ChatCompletionMessageToolCallParam
+OpenAIChatCompletionSystemMessage = openai_chat.ChatCompletionSystemMessageParam
+OpenAIChatCompletionToolMessage = openai_chat.ChatCompletionToolMessageParam
+OpenAIChatCompletionUserMessage = openai_chat.ChatCompletionUserMessageParam
+OpenAIChoice = openai_completion.Choice
+OpenAIChoiceLogprobs = openai_completion.ChoiceLogprobs  # same as chat_completion_chunk ChoiceLogprobs
+OpenAIChatCompletionChunkChoice = openai_chunk.Choice
+OpenAIChoiceDelta = openai_chunk.ChoiceDelta
+OpenAIChoiceDeltaToolCall = openai_chunk.ChoiceDeltaToolCall
+OpenAIChoiceDeltaToolCallFunction = openai_chunk.ChoiceDeltaToolCallFunction
+OpenAIImageURL = openai_image_param.ImageURL
+OpenAIFunction = openai_tool_call_param.Function
 from pydantic import BaseModel
 
 from llama_stack.apis.common.content_types import (
