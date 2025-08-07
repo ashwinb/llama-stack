@@ -10,8 +10,13 @@ If in doubt, please open a [discussion](https://github.com/meta-llama/llama-stac
 
 **I'd like to contribute!**
 
-All issues are actionable (please report if they are not.) Pick one and start working on it. Thank you.
-If you need help or guidance, comment on the issue. Issues that are extra friendly to new contributors are tagged with "contributor friendly".
+If you are new to the project, start by looking at the issues tagged with "good first issue". If you're interested
+leave a comment on the issue and a triager will assign it to you.
+
+Please avoid picking up too many issues at once. This helps you stay focused and ensures that others in the community also have opportunities to contribute.
+- Try to work on only 1–2 issues at a time, especially if you’re still getting familiar with the codebase.
+- Before taking an issue, check if it’s already assigned or being actively discussed.
+- If you’re blocked or can’t continue with an issue, feel free to unassign yourself or leave a comment so others can step in.
 
 **I have a bug!**
 
@@ -41,6 +46,15 @@ If you need help or guidance, comment on the issue. Issues that are extra friend
 4. Make sure your code lints using `pre-commit`.
 5. If you haven't already, complete the Contributor License Agreement ("CLA").
 6. Ensure your pull request follows the [conventional commits format](https://www.conventionalcommits.org/en/v1.0.0/).
+7. Ensure your pull request follows the [coding style](#coding-style).
+
+
+Please keep pull requests (PRs) small and focused. If you have a large set of changes, consider splitting them into logically grouped, smaller PRs to facilitate review and testing.
+
+> [!TIP]
+> As a general guideline:
+> - Experienced contributors should try to keep no more than 5 open PRs at a time.
+> - New contributors are encouraged to have only one open PR at a time until they’re familiar with the codebase and process.
 
 ## Contributor License Agreement ("CLA")
 In order to accept your pull request, we need you to submit a CLA. You only need
@@ -66,13 +80,13 @@ You can install the dependencies by running:
 
 ```bash
 cd llama-stack
-uv sync --extra dev
+uv sync --group dev
 uv pip install -e .
 source .venv/bin/activate
 ```
 
 > [!NOTE]
-> You can pin a specific version of Python to use for `uv` by adding a `.python-version` file in the root project directory.
+> You can use a specific version of Python with `uv` by adding the `--python <version>` flag (e.g. `--python 3.12`)
 > Otherwise, `uv` will automatically select a Python version according to the `requires-python` section of the `pyproject.toml`.
 > For more info, see the [uv docs around Python versions](https://docs.astral.sh/uv/concepts/python-versions/).
 
@@ -112,7 +126,7 @@ uv run pre-commit run --all-files
 
 ## Running tests
 
-You can find the Llama Stack testing documentation here [here](tests/README.md).
+You can find the Llama Stack testing documentation [here](https://github.com/meta-llama/llama-stack/blob/main/tests/README.md).
 
 ## Adding a new dependency to the project
 
@@ -139,6 +153,11 @@ uv sync
   justification for bypassing the check.
 * Don't use unicode characters in the codebase. ASCII-only is preferred for compatibility or
   readability reasons.
+* Providers configuration class should be Pydantic Field class. It should have a `description` field
+  that describes the configuration. These descriptions will be used to generate the provider
+  documentation.
+* When possible, use keyword arguments only when calling functions.
+* Llama Stack utilizes [custom Exception classes](llama_stack/apis/common/errors.py) for certain Resources that should be used where applicable.
 
 ## Common Tasks
 
@@ -146,7 +165,7 @@ Some tips about common tasks you work on while contributing to Llama Stack:
 
 ### Using `llama stack build`
 
-Building a stack image (conda / docker) will use the production version of the `llama-stack` and `llama-stack-client` packages. If you are developing with a llama-stack repository checked out and need your code to be reflected in the stack image, set `LLAMA_STACK_DIR` and `LLAMA_STACK_CLIENT_DIR` to the appropriate checked out directories when running any of the `llama` CLI commands.
+Building a stack image will use the production version of the `llama-stack` and `llama-stack-client` packages. If you are developing with a llama-stack repository checked out and need your code to be reflected in the stack image, set `LLAMA_STACK_DIR` and `LLAMA_STACK_CLIENT_DIR` to the appropriate checked out directories when running any of the `llama` CLI commands.
 
 Example:
 ```bash
@@ -154,13 +173,22 @@ cd work/
 git clone https://github.com/meta-llama/llama-stack.git
 git clone https://github.com/meta-llama/llama-stack-client-python.git
 cd llama-stack
-LLAMA_STACK_DIR=$(pwd) LLAMA_STACK_CLIENT_DIR=../llama-stack-client-python llama stack build --template <...>
+LLAMA_STACK_DIR=$(pwd) LLAMA_STACK_CLIENT_DIR=../llama-stack-client-python llama stack build --distro <...>
 ```
 
+### Updating distribution configurations
 
-### Updating Provider Configurations
+If you have made changes to a provider's configuration in any form (introducing a new config key, or
+changing models, etc.), you should run `./scripts/distro_codegen.py` to re-generate various YAML
+files as well as the documentation. You should not change `docs/source/.../distributions/` files
+manually as they are auto-generated.
 
-If you have made changes to a provider's configuration in any form (introducing a new config key, or changing models, etc.), you should run `./scripts/distro_codegen.py` to re-generate various YAML files as well as the documentation. You should not change `docs/source/.../distributions/` files manually as they are auto-generated.
+### Updating the provider documentation
+
+If you have made changes to a provider's configuration, you should run `./scripts/provider_codegen.py`
+to re-generate the documentation. You should not change `docs/source/.../providers/` files manually
+as they are auto-generated.
+Note that the provider "description" field will be used to generate the provider documentation.
 
 ### Building the Documentation
 
@@ -168,10 +196,10 @@ If you are making changes to the documentation at [https://llama-stack.readthedo
 
 ```bash
 # This rebuilds the documentation pages.
-uv run --with ".[docs]" make -C docs/ html
+uv run --group docs make -C docs/ html
 
 # This will start a local server (usually at http://127.0.0.1:8000) that automatically rebuilds and refreshes when you make changes to the documentation.
-uv run --with ".[docs]" sphinx-autobuild docs/source docs/build/html --write-all
+uv run --group docs sphinx-autobuild docs/source docs/build/html --write-all
 ```
 
 ### Update API Documentation
@@ -179,7 +207,7 @@ uv run --with ".[docs]" sphinx-autobuild docs/source docs/build/html --write-all
 If you modify or add new API endpoints, update the API documentation accordingly. You can do this by running the following command:
 
 ```bash
-uv run --with ".[dev]" ./docs/openapi_generator/run_openapi_generator.sh
+uv run ./docs/openapi_generator/run_openapi_generator.sh
 ```
 
 The generated API documentation will be available in `docs/_static/`. Make sure to review the changes before committing.

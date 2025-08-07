@@ -11,10 +11,9 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 from openai.types.chat.chat_completion_chunk import (
     ChatCompletionChunk as OpenAIChatCompletionChunk,
 )
@@ -44,6 +43,7 @@ from llama_stack.apis.inference import (
 )
 from llama_stack.apis.models import Model
 from llama_stack.models.llama.datatypes import StopReason, ToolCall
+from llama_stack.providers.datatypes import HealthStatus
 from llama_stack.providers.remote.inference.vllm.config import VLLMInferenceAdapterConfig
 from llama_stack.providers.remote.inference.vllm.vllm import (
     VLLMInferenceAdapter,
@@ -69,9 +69,12 @@ class MockInferenceAdapterWithSleep:
             # ruff: noqa: N802
             def do_POST(self):
                 time.sleep(sleep_time)
+                response_body = json.dumps(response).encode("utf-8")
                 self.send_response(code=200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", len(response_body))
                 self.end_headers()
-                self.wfile.write(json.dumps(response).encode("utf-8"))
+                self.wfile.write(response_body)
 
         self.request_handler = DelayedRequestHandler
 
@@ -99,7 +102,7 @@ def mock_openai_models_list():
         yield mock_list
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest.fixture(scope="module")
 async def vllm_inference_adapter():
     config = VLLMInferenceAdapterConfig(url="http://mocked.localhost:12345")
     inference_adapter = VLLMInferenceAdapter(config)
@@ -108,7 +111,6 @@ async def vllm_inference_adapter():
     return inference_adapter
 
 
-@pytest.mark.asyncio
 async def test_register_model_checks_vllm(mock_openai_models_list, vllm_inference_adapter):
     async def mock_openai_models():
         yield OpenAIModel(id="foo", created=1, object="model", owned_by="test")
@@ -121,7 +123,6 @@ async def test_register_model_checks_vllm(mock_openai_models_list, vllm_inferenc
     mock_openai_models_list.assert_called()
 
 
-@pytest.mark.asyncio
 async def test_old_vllm_tool_choice(vllm_inference_adapter):
     """
     Test that we set tool_choice to none when no tools are in use
@@ -145,7 +146,6 @@ async def test_old_vllm_tool_choice(vllm_inference_adapter):
         assert request.tool_config.tool_choice == ToolChoice.none
 
 
-@pytest.mark.asyncio
 async def test_tool_call_response(vllm_inference_adapter):
     """Verify that tool call arguments from a CompletionMessage are correctly converted
     into the expected JSON format."""
@@ -188,7 +188,6 @@ async def test_tool_call_response(vllm_inference_adapter):
         ]
 
 
-@pytest.mark.asyncio
 async def test_tool_call_delta_empty_tool_call_buf():
     """
     Test that we don't generate extra chunks when processing a
@@ -218,7 +217,6 @@ async def test_tool_call_delta_empty_tool_call_buf():
     assert chunks[1].event.stop_reason == StopReason.end_of_turn
 
 
-@pytest.mark.asyncio
 async def test_tool_call_delta_streaming_arguments_dict():
     async def mock_stream():
         mock_chunk_1 = OpenAIChatCompletionChunk(
@@ -293,7 +291,6 @@ async def test_tool_call_delta_streaming_arguments_dict():
     assert chunks[2].event.event_type.value == "complete"
 
 
-@pytest.mark.asyncio
 async def test_multiple_tool_calls():
     async def mock_stream():
         mock_chunk_1 = OpenAIChatCompletionChunk(
@@ -372,7 +369,6 @@ async def test_multiple_tool_calls():
     assert chunks[3].event.event_type.value == "complete"
 
 
-@pytest.mark.asyncio
 async def test_process_vllm_chat_completion_stream_response_no_choices():
     """
     Test that we don't error out when vLLM returns no choices for a
@@ -397,6 +393,7 @@ async def test_process_vllm_chat_completion_stream_response_no_choices():
     assert chunks[0].event.event_type.value == "start"
 
 
+@pytest.mark.allow_network
 def test_chat_completion_doesnt_block_event_loop(caplog):
     loop = asyncio.new_event_loop()
     loop.set_debug(True)
@@ -449,7 +446,6 @@ def test_chat_completion_doesnt_block_event_loop(caplog):
     assert not asyncio_warnings
 
 
-@pytest.mark.asyncio
 async def test_get_params_empty_tools(vllm_inference_adapter):
     request = ChatCompletionRequest(
         tools=[],
@@ -460,7 +456,6 @@ async def test_get_params_empty_tools(vllm_inference_adapter):
     assert "tools" not in params
 
 
-@pytest.mark.asyncio
 async def test_process_vllm_chat_completion_stream_response_tool_call_args_last_chunk():
     """
     Tests the edge case where the model returns the arguments for the tool call in the same chunk that
@@ -539,7 +534,6 @@ async def test_process_vllm_chat_completion_stream_response_tool_call_args_last_
     assert chunks[-2].event.delta.tool_call.arguments == mock_tool_arguments
 
 
-@pytest.mark.asyncio
 async def test_process_vllm_chat_completion_stream_response_no_finish_reason():
     """
     Tests the edge case where the model requests a tool call and stays idle without explicitly providing the
@@ -592,7 +586,6 @@ async def test_process_vllm_chat_completion_stream_response_no_finish_reason():
     assert chunks[-2].event.delta.tool_call.arguments == mock_tool_arguments
 
 
-@pytest.mark.asyncio
 async def test_process_vllm_chat_completion_stream_response_tool_without_args():
     """
     Tests the edge case where no arguments are provided for the tool call.
@@ -639,3 +632,68 @@ async def test_process_vllm_chat_completion_stream_response_tool_without_args():
     assert chunks[-2].event.delta.type == "tool_call"
     assert chunks[-2].event.delta.tool_call.tool_name == mock_tool_name
     assert chunks[-2].event.delta.tool_call.arguments == {}
+
+
+async def test_health_status_success(vllm_inference_adapter):
+    """
+    Test the health method of VLLM InferenceAdapter when the connection is successful.
+
+    This test verifies that the health method returns a HealthResponse with status OK, only
+    when the connection to the vLLM server is successful.
+    """
+    # Set vllm_inference_adapter.client to None to ensure _create_client is called
+    vllm_inference_adapter.client = None
+    with patch.object(vllm_inference_adapter, "_create_client") as mock_create_client:
+        # Create mock client and models
+        mock_client = MagicMock()
+        mock_models = MagicMock()
+
+        # Create a mock async iterator that yields a model when iterated
+        async def mock_list():
+            for model in [MagicMock()]:
+                yield model
+
+        # Set up the models.list to return our mock async iterator
+        mock_models.list.return_value = mock_list()
+        mock_client.models = mock_models
+        mock_create_client.return_value = mock_client
+
+        # Call the health method
+        health_response = await vllm_inference_adapter.health()
+        # Verify the response
+        assert health_response["status"] == HealthStatus.OK
+
+        # Verify that models.list was called
+        mock_models.list.assert_called_once()
+
+
+async def test_health_status_failure(vllm_inference_adapter):
+    """
+    Test the health method of VLLM InferenceAdapter when the connection fails.
+
+    This test verifies that the health method returns a HealthResponse with status ERROR
+    and an appropriate error message when the connection to the vLLM server fails.
+    """
+    vllm_inference_adapter.client = None
+    with patch.object(vllm_inference_adapter, "_create_client") as mock_create_client:
+        # Create mock client and models
+        mock_client = MagicMock()
+        mock_models = MagicMock()
+
+        # Create a mock async iterator that raises an exception when iterated
+        async def mock_list():
+            raise Exception("Connection failed")
+            yield  # Unreachable code
+
+        # Set up the models.list to return our mock async iterator
+        mock_models.list.return_value = mock_list()
+        mock_client.models = mock_models
+        mock_create_client.return_value = mock_client
+
+        # Call the health method
+        health_response = await vllm_inference_adapter.health()
+        # Verify the response
+        assert health_response["status"] == HealthStatus.ERROR
+        assert "Health check failed: Connection failed" in health_response["message"]
+
+        mock_models.list.assert_called_once()

@@ -11,10 +11,17 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from llama_stack.distribution.datatypes import AuthenticationConfig
-from llama_stack.distribution.server.auth import AuthenticationMiddleware
-from llama_stack.distribution.server.auth_providers import (
+from llama_stack.core.datatypes import (
+    AuthenticationConfig,
     AuthProviderType,
+    CustomAuthConfig,
+    OAuth2IntrospectionConfig,
+    OAuth2JWKSConfig,
+    OAuth2TokenAuthConfig,
+)
+from llama_stack.core.request_headers import User
+from llama_stack.core.server.auth import AuthenticationMiddleware, _has_required_scope
+from llama_stack.core.server.auth_providers import (
     get_attributes_from_claims,
 )
 
@@ -61,26 +68,13 @@ def invalid_token():
 def http_app(mock_auth_endpoint):
     app = FastAPI()
     auth_config = AuthenticationConfig(
-        provider_type=AuthProviderType.CUSTOM,
-        config={"endpoint": mock_auth_endpoint},
+        provider_config=CustomAuthConfig(
+            type=AuthProviderType.CUSTOM,
+            endpoint=mock_auth_endpoint,
+        ),
+        access_policy=[],
     )
-    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config)
-
-    @app.get("/test")
-    def test_endpoint():
-        return {"message": "Authentication successful"}
-
-    return app
-
-
-@pytest.fixture
-def k8s_app():
-    app = FastAPI()
-    auth_config = AuthenticationConfig(
-        provider_type=AuthProviderType.KUBERNETES,
-        config={"api_server_url": "https://kubernetes.default.svc"},
-    )
-    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config)
+    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config, impls={})
 
     @app.get("/test")
     def test_endpoint():
@@ -92,11 +86,6 @@ def k8s_app():
 @pytest.fixture
 def http_client(http_app):
     return TestClient(http_app)
-
-
-@pytest.fixture
-def k8s_client(k8s_app):
-    return TestClient(k8s_app)
 
 
 @pytest.fixture
@@ -117,20 +106,56 @@ def mock_scope():
 def mock_http_middleware(mock_auth_endpoint):
     mock_app = AsyncMock()
     auth_config = AuthenticationConfig(
-        provider_type=AuthProviderType.CUSTOM,
-        config={"endpoint": mock_auth_endpoint},
+        provider_config=CustomAuthConfig(
+            type=AuthProviderType.CUSTOM,
+            endpoint=mock_auth_endpoint,
+        ),
+        access_policy=[],
     )
-    return AuthenticationMiddleware(mock_app, auth_config), mock_app
+    return AuthenticationMiddleware(mock_app, auth_config, {}), mock_app
 
 
 @pytest.fixture
-def mock_k8s_middleware():
+def mock_impls():
+    """Mock implementations for scope testing"""
+    return {}
+
+
+@pytest.fixture
+def scope_middleware_with_mocks(mock_auth_endpoint):
+    """Create AuthenticationMiddleware with mocked route implementations"""
     mock_app = AsyncMock()
     auth_config = AuthenticationConfig(
-        provider_type=AuthProviderType.KUBERNETES,
-        config={"api_server_url": "https://kubernetes.default.svc"},
+        provider_config=CustomAuthConfig(
+            type=AuthProviderType.CUSTOM,
+            endpoint=mock_auth_endpoint,
+        ),
+        access_policy=[],
     )
-    return AuthenticationMiddleware(mock_app, auth_config), mock_app
+    middleware = AuthenticationMiddleware(mock_app, auth_config, {})
+
+    # Mock the route_impls to simulate finding routes with required scopes
+    from llama_stack.schema_utils import WebMethod
+
+    scoped_webmethod = WebMethod(route="/test/scoped", method="POST", required_scope="test.read")
+
+    public_webmethod = WebMethod(route="/test/public", method="GET")
+
+    # Mock the route finding logic
+    def mock_find_matching_route(method, path, route_impls):
+        if method == "POST" and path == "/test/scoped":
+            return None, {}, "/test/scoped", scoped_webmethod
+        elif method == "GET" and path == "/test/public":
+            return None, {}, "/test/public", public_webmethod
+        else:
+            raise ValueError("No matching route")
+
+    import llama_stack.core.server.auth
+
+    llama_stack.core.server.auth.find_matching_route = mock_find_matching_route
+    llama_stack.core.server.auth.initialize_route_impls = lambda impls: {}
+
+    return middleware, mock_app
 
 
 async def mock_post_success(*args, **kwargs):
@@ -139,7 +164,7 @@ async def mock_post_success(*args, **kwargs):
         {
             "message": "Authentication successful",
             "principal": "test-principal",
-            "access_attributes": {
+            "attributes": {
                 "roles": ["admin", "user"],
                 "teams": ["ml-team", "nlp-team"],
                 "projects": ["llama-3", "project-x"],
@@ -157,17 +182,48 @@ async def mock_post_exception(*args, **kwargs):
     raise Exception("Connection error")
 
 
+async def mock_post_success_with_scope(*args, **kwargs):
+    """Mock auth response for user with test.read scope"""
+    return MockResponse(
+        200,
+        {
+            "message": "Authentication successful",
+            "principal": "test-user",
+            "attributes": {
+                "scopes": ["test.read", "other.scope"],
+                "roles": ["user"],
+            },
+        },
+    )
+
+
+async def mock_post_success_no_scope(*args, **kwargs):
+    """Mock auth response for user without required scope"""
+    return MockResponse(
+        200,
+        {
+            "message": "Authentication successful",
+            "principal": "test-user",
+            "attributes": {
+                "scopes": ["other.scope"],
+                "roles": ["user"],
+            },
+        },
+    )
+
+
 # HTTP Endpoint Tests
 def test_missing_auth_header(http_client):
     response = http_client.get("/test")
     assert response.status_code == 401
-    assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
+    assert "Authentication required" in response.json()["error"]["message"]
+    assert "validated by mock-auth-service" in response.json()["error"]["message"]
 
 
 def test_invalid_auth_header_format(http_client):
     response = http_client.get("/test", headers={"Authorization": "InvalidFormat token123"})
     assert response.status_code == 401
-    assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
+    assert "Invalid Authorization header format" in response.json()["error"]["message"]
 
 
 @patch("httpx.AsyncClient.post", new=mock_post_success)
@@ -220,7 +276,6 @@ def test_http_auth_request_payload(http_client, valid_api_key, mock_auth_endpoin
         assert "param2" in payload["request"]["params"]
 
 
-@pytest.mark.asyncio
 async def test_http_middleware_with_access_attributes(mock_http_middleware, mock_scope):
     """Test HTTP middleware behavior with access attributes"""
     middleware, mock_app = mock_http_middleware
@@ -233,7 +288,7 @@ async def test_http_middleware_with_access_attributes(mock_http_middleware, mock
             {
                 "message": "Authentication successful",
                 "principal": "test-principal",
-                "access_attributes": {
+                "attributes": {
                     "roles": ["admin", "user"],
                     "teams": ["ml-team", "nlp-team"],
                     "projects": ["llama-3", "project-x"],
@@ -255,33 +310,6 @@ async def test_http_middleware_with_access_attributes(mock_http_middleware, mock
         mock_app.assert_called_once_with(mock_scope, mock_receive, mock_send)
 
 
-@pytest.mark.asyncio
-async def test_http_middleware_no_attributes(mock_http_middleware, mock_scope):
-    """Test middleware behavior with no access attributes"""
-    middleware, mock_app = mock_http_middleware
-    mock_receive = AsyncMock()
-    mock_send = AsyncMock()
-
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_client_instance = AsyncMock()
-        mock_client.return_value.__aenter__.return_value = mock_client_instance
-
-        mock_client_instance.post.return_value = MockResponse(
-            200,
-            {
-                "message": "Authentication successful"
-                # No access_attributes
-            },
-        )
-
-        await middleware(mock_scope, mock_receive, mock_send)
-
-        assert "user_attributes" in mock_scope
-        attributes = mock_scope["user_attributes"]
-        assert "roles" in attributes
-        assert attributes["roles"] == ["test.jwt.token"]
-
-
 # oauth2 token provider tests
 
 
@@ -289,16 +317,16 @@ async def test_http_middleware_no_attributes(mock_http_middleware, mock_scope):
 def oauth2_app():
     app = FastAPI()
     auth_config = AuthenticationConfig(
-        provider_type=AuthProviderType.OAUTH2_TOKEN,
-        config={
-            "jwks": {
-                "uri": "http://mock-authz-service/token/introspect",
-                "key_recheck_period": "3600",
-            },
-            "audience": "llama-stack",
-        },
+        provider_config=OAuth2TokenAuthConfig(
+            type=AuthProviderType.OAUTH2_TOKEN,
+            jwks=OAuth2JWKSConfig(
+                uri="http://mock-authz-service/token/introspect",
+            ),
+            audience="llama-stack",
+        ),
+        access_policy=[],
     )
-    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config)
+    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config, impls={})
 
     @app.get("/test")
     def test_endpoint():
@@ -315,13 +343,14 @@ def oauth2_client(oauth2_app):
 def test_missing_auth_header_oauth2(oauth2_client):
     response = oauth2_client.get("/test")
     assert response.status_code == 401
-    assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
+    assert "Authentication required" in response.json()["error"]["message"]
+    assert "OAuth2 Bearer token" in response.json()["error"]["message"]
 
 
 def test_invalid_auth_header_format_oauth2(oauth2_client):
     response = oauth2_client.get("/test", headers={"Authorization": "InvalidFormat token123"})
     assert response.status_code == 401
-    assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
+    assert "Invalid Authorization header format" in response.json()["error"]["message"]
 
 
 async def mock_jwks_response(*args, **kwargs):
@@ -372,6 +401,57 @@ def test_invalid_oauth2_authentication(oauth2_client, invalid_token):
     assert "Invalid JWT token" in response.json()["error"]["message"]
 
 
+async def mock_auth_jwks_response(*args, **kwargs):
+    if "headers" not in kwargs or "Authorization" not in kwargs["headers"]:
+        return MockResponse(401, {})
+    authz = kwargs["headers"]["Authorization"]
+    if authz != "Bearer my-jwks-token":
+        return MockResponse(401, {})
+    return await mock_jwks_response(args, kwargs)
+
+
+@pytest.fixture
+def oauth2_app_with_jwks_token():
+    app = FastAPI()
+    auth_config = AuthenticationConfig(
+        provider_config=OAuth2TokenAuthConfig(
+            type=AuthProviderType.OAUTH2_TOKEN,
+            jwks=OAuth2JWKSConfig(
+                uri="http://mock-authz-service/token/introspect",
+                key_recheck_period=3600,
+                token="my-jwks-token",
+            ),
+            audience="llama-stack",
+        ),
+        access_policy=[],
+    )
+    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config, impls={})
+
+    @app.get("/test")
+    def test_endpoint():
+        return {"message": "Authentication successful"}
+
+    return app
+
+
+@pytest.fixture
+def oauth2_client_with_jwks_token(oauth2_app_with_jwks_token):
+    return TestClient(oauth2_app_with_jwks_token)
+
+
+@patch("httpx.AsyncClient.get", new=mock_auth_jwks_response)
+def test_oauth2_with_jwks_token_expected(oauth2_client, jwt_token_valid):
+    response = oauth2_client.get("/test", headers={"Authorization": f"Bearer {jwt_token_valid}"})
+    assert response.status_code == 401
+
+
+@patch("httpx.AsyncClient.get", new=mock_auth_jwks_response)
+def test_oauth2_with_jwks_token_configured(oauth2_client_with_jwks_token, jwt_token_valid):
+    response = oauth2_client_with_jwks_token.get("/test", headers={"Authorization": f"Bearer {jwt_token_valid}"})
+    assert response.status_code == 200
+    assert response.json() == {"message": "Authentication successful"}
+
+
 def test_get_attributes_from_claims():
     claims = {
         "sub": "my-user",
@@ -380,16 +460,16 @@ def test_get_attributes_from_claims():
         "aud": "llama-stack",
     }
     attributes = get_attributes_from_claims(claims, {"sub": "roles", "groups": "teams"})
-    assert attributes.roles == ["my-user"]
-    assert attributes.teams == ["group1", "group2"]
+    assert attributes["roles"] == ["my-user"]
+    assert attributes["teams"] == ["group1", "group2"]
 
     claims = {
         "sub": "my-user",
         "tenant": "my-tenant",
     }
     attributes = get_attributes_from_claims(claims, {"sub": "roles", "tenant": "namespaces"})
-    assert attributes.roles == ["my-user"]
-    assert attributes.namespaces == ["my-tenant"]
+    assert attributes["roles"] == ["my-user"]
+    assert attributes["namespaces"] == ["my-tenant"]
 
     claims = {
         "sub": "my-user",
@@ -408,9 +488,9 @@ def test_get_attributes_from_claims():
             "groups": "teams",
         },
     )
-    assert set(attributes.roles) == {"my-user", "my-username"}
-    assert set(attributes.teams) == {"my-team", "group1", "group2"}
-    assert attributes.namespaces == ["my-tenant"]
+    assert set(attributes["roles"]) == {"my-user", "my-username"}
+    assert set(attributes["teams"]) == {"my-team", "group1", "group2"}
+    assert attributes["namespaces"] == ["my-tenant"]
 
 
 # TODO: add more tests for oauth2 token provider
@@ -426,13 +506,17 @@ def mock_introspection_endpoint():
 def introspection_app(mock_introspection_endpoint):
     app = FastAPI()
     auth_config = AuthenticationConfig(
-        provider_type=AuthProviderType.OAUTH2_TOKEN,
-        config={
-            "jwks": None,
-            "introspection": {"url": mock_introspection_endpoint, "client_id": "myclient", "client_secret": "abcdefg"},
-        },
+        provider_config=OAuth2TokenAuthConfig(
+            type=AuthProviderType.OAUTH2_TOKEN,
+            introspection=OAuth2IntrospectionConfig(
+                url=mock_introspection_endpoint,
+                client_id="myclient",
+                client_secret="abcdefg",
+            ),
+        ),
+        access_policy=[],
     )
-    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config)
+    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config, impls={})
 
     @app.get("/test")
     def test_endpoint():
@@ -445,24 +529,24 @@ def introspection_app(mock_introspection_endpoint):
 def introspection_app_with_custom_mapping(mock_introspection_endpoint):
     app = FastAPI()
     auth_config = AuthenticationConfig(
-        provider_type=AuthProviderType.OAUTH2_TOKEN,
-        config={
-            "jwks": None,
-            "introspection": {
-                "url": mock_introspection_endpoint,
-                "client_id": "myclient",
-                "client_secret": "abcdefg",
-                "send_secret_in_body": "true",
-            },
-            "claims_mapping": {
+        provider_config=OAuth2TokenAuthConfig(
+            type=AuthProviderType.OAUTH2_TOKEN,
+            introspection=OAuth2IntrospectionConfig(
+                url=mock_introspection_endpoint,
+                client_id="myclient",
+                client_secret="abcdefg",
+                send_secret_in_body=True,
+            ),
+            claims_mapping={
                 "sub": "roles",
                 "scope": "roles",
                 "groups": "teams",
                 "aud": "namespaces",
             },
-        },
+        ),
+        access_policy=[],
     )
-    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config)
+    app.add_middleware(AuthenticationMiddleware, auth_config=auth_config, impls={})
 
     @app.get("/test")
     def test_endpoint():
@@ -484,13 +568,14 @@ def introspection_client_with_custom_mapping(introspection_app_with_custom_mappi
 def test_missing_auth_header_introspection(introspection_client):
     response = introspection_client.get("/test")
     assert response.status_code == 401
-    assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
+    assert "Authentication required" in response.json()["error"]["message"]
+    assert "OAuth2 Bearer token" in response.json()["error"]["message"]
 
 
 def test_invalid_auth_header_format_introspection(introspection_client):
     response = introspection_client.get("/test", headers={"Authorization": "InvalidFormat token123"})
     assert response.status_code == 401
-    assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
+    assert "Invalid Authorization header format" in response.json()["error"]["message"]
 
 
 async def mock_introspection_active(*args, **kwargs):
@@ -570,3 +655,122 @@ def test_valid_introspection_with_custom_mapping_authentication(
     )
     assert response.status_code == 200
     assert response.json() == {"message": "Authentication successful"}
+
+
+# Scope-based authorization tests
+@patch("httpx.AsyncClient.post", new=mock_post_success_with_scope)
+async def test_scope_authorization_success(scope_middleware_with_mocks, valid_api_key):
+    """Test that user with required scope can access protected endpoint"""
+    middleware, mock_app = scope_middleware_with_mocks
+    mock_receive = AsyncMock()
+    mock_send = AsyncMock()
+
+    scope = {
+        "type": "http",
+        "path": "/test/scoped",
+        "method": "POST",
+        "headers": [(b"authorization", f"Bearer {valid_api_key}".encode())],
+    }
+
+    await middleware(scope, mock_receive, mock_send)
+
+    # Should call the downstream app (no 403 error sent)
+    mock_app.assert_called_once_with(scope, mock_receive, mock_send)
+    mock_send.assert_not_called()
+
+
+@patch("httpx.AsyncClient.post", new=mock_post_success_no_scope)
+async def test_scope_authorization_denied(scope_middleware_with_mocks, valid_api_key):
+    """Test that user without required scope gets 403 access denied"""
+    middleware, mock_app = scope_middleware_with_mocks
+    mock_receive = AsyncMock()
+    mock_send = AsyncMock()
+
+    scope = {
+        "type": "http",
+        "path": "/test/scoped",
+        "method": "POST",
+        "headers": [(b"authorization", f"Bearer {valid_api_key}".encode())],
+    }
+
+    await middleware(scope, mock_receive, mock_send)
+
+    # Should send 403 error, not call downstream app
+    mock_app.assert_not_called()
+    assert mock_send.call_count == 2  # start + body
+
+    # Check the response
+    start_call = mock_send.call_args_list[0][0][0]
+    assert start_call["status"] == 403
+
+    body_call = mock_send.call_args_list[1][0][0]
+    body_text = body_call["body"].decode()
+    assert "Access denied" in body_text
+    assert "test.read" in body_text
+
+
+@patch("httpx.AsyncClient.post", new=mock_post_success_no_scope)
+async def test_public_endpoint_no_scope_required(scope_middleware_with_mocks, valid_api_key):
+    """Test that public endpoints work without specific scopes"""
+    middleware, mock_app = scope_middleware_with_mocks
+    mock_receive = AsyncMock()
+    mock_send = AsyncMock()
+
+    scope = {
+        "type": "http",
+        "path": "/test/public",
+        "method": "GET",
+        "headers": [(b"authorization", f"Bearer {valid_api_key}".encode())],
+    }
+
+    await middleware(scope, mock_receive, mock_send)
+
+    # Should call the downstream app (no error)
+    mock_app.assert_called_once_with(scope, mock_receive, mock_send)
+    mock_send.assert_not_called()
+
+
+async def test_scope_authorization_no_auth_disabled(scope_middleware_with_mocks):
+    """Test that when auth is disabled (no user), scope checks are bypassed"""
+    middleware, mock_app = scope_middleware_with_mocks
+    mock_receive = AsyncMock()
+    mock_send = AsyncMock()
+
+    scope = {
+        "type": "http",
+        "path": "/test/scoped",
+        "method": "POST",
+        "headers": [],  # No authorization header
+    }
+
+    await middleware(scope, mock_receive, mock_send)
+
+    # Should send 401 auth error, not call downstream app
+    mock_app.assert_not_called()
+    assert mock_send.call_count == 2  # start + body
+
+    # Check the response
+    start_call = mock_send.call_args_list[0][0][0]
+    assert start_call["status"] == 401
+
+    body_call = mock_send.call_args_list[1][0][0]
+    body_text = body_call["body"].decode()
+    assert "Authentication required" in body_text
+
+
+def test_has_required_scope_function():
+    """Test the _has_required_scope function directly"""
+    # Test user with required scope
+    user_with_scope = User(principal="test-user", attributes={"scopes": ["test.read", "other.scope"]})
+    assert _has_required_scope("test.read", user_with_scope)
+
+    # Test user without required scope
+    user_without_scope = User(principal="test-user", attributes={"scopes": ["other.scope"]})
+    assert not _has_required_scope("test.read", user_without_scope)
+
+    # Test user with no scopes attribute
+    user_no_scopes = User(principal="test-user", attributes={})
+    assert not _has_required_scope("test.read", user_no_scopes)
+
+    # Test no user (auth disabled)
+    assert _has_required_scope("test.read", None)

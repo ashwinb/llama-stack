@@ -1,5 +1,106 @@
 # Changelog
 
+# v0.2.15
+Published on: 2025-07-16T03:30:01Z
+
+
+
+---
+
+# v0.2.14
+Published on: 2025-07-04T16:06:48Z
+
+## Highlights
+
+* Support for Llama Guard 4
+* Added Milvus  support to vector-stores API
+* Documentation and zero-to-hero updates for latest APIs
+
+
+---
+
+# v0.2.13
+Published on: 2025-06-28T04:28:11Z
+
+## Highlights
+* search_mode support in OpenAI vector store API
+* Security fixes
+
+
+---
+
+# v0.2.12
+Published on: 2025-06-20T22:52:12Z
+
+## Highlights
+* Filter support in file search
+* Support auth attributes in inference and response stores
+
+
+---
+
+# v0.2.11
+Published on: 2025-06-17T20:26:26Z
+
+## Highlights
+* OpenAI-compatible vector store APIs
+* Hybrid Search in Sqlite-vec
+* File search tool in Responses API
+* Pagination in inference and response stores
+* Added `suffix` to completions API for fill-in-the-middle tasks
+
+
+---
+
+# v0.2.10.1
+Published on: 2025-06-06T20:11:02Z
+
+## Highlights
+* ChromaDB provider fix
+
+
+---
+
+# v0.2.10
+Published on: 2025-06-05T23:21:45Z
+
+## Highlights
+
+* OpenAI-compatible embeddings API
+* OpenAI-compatible Files API
+* Postgres support in starter distro
+* Enable ingestion of precomputed embeddings
+* Full multi-turn support in Responses API
+* Fine-grained access control policy
+
+
+---
+
+# v0.2.9
+Published on: 2025-05-30T20:01:56Z
+
+## Highlights
+* Added initial streaming support in Responses API
+* UI view for Responses
+* Postgres inference store support
+
+
+---
+
+# v0.2.8
+Published on: 2025-05-27T21:03:47Z
+
+# Release v0.2.8
+
+## Highlights
+
+* Server-side MCP with auth firewalls now works in the Stack - both for Agents and Responses
+* Get chat completions APIs and UI to show chat completions
+* Enable keyword search for sqlite-vec
+
+
+---
+
 # v0.2.7
 Published on: 2025-05-16T20:38:10Z
 
@@ -350,7 +451,7 @@ GenAI application developers need more than just an LLM - they need to integrate
 
 Llama Stack was created to provide developers with a comprehensive and coherent interface that simplifies AI application development and codifies best practices across the Llama ecosystem. Since our launch in September 2024, we have seen a huge uptick in interest in Llama Stack APIs by both AI developers and from partners building AI services with Llama models. Partners like Nvidia, Fireworks, and Ollama have collaborated with us to develop implementations across various APIs, including inference, memory, and safety.
 
-With Llama Stack, you can easily build a RAG agent which can also search the web, do complex math, and custom tool calling. You can use telemetry to inspect those traces, and convert telemetry into evals datasets. And with Llama Stack’s plugin architecture and prepackage distributions, you choose to run your agent anywhere - in the cloud with our partners, deploy your own environment using virtualenv, conda, or Docker, operate locally with Ollama, or even run on mobile devices with our SDKs. Llama Stack offers unprecedented flexibility while also simplifying the developer experience.
+With Llama Stack, you can easily build a RAG agent which can also search the web, do complex math, and custom tool calling. You can use telemetry to inspect those traces, and convert telemetry into evals datasets. And with Llama Stack’s plugin architecture and prepackage distributions, you choose to run your agent anywhere - in the cloud with our partners, deploy your own environment using virtualenv or Docker, operate locally with Ollama, or even run on mobile devices with our SDKs. Llama Stack offers unprecedented flexibility while also simplifying the developer experience.
 
 ## Release
 After iterating on the APIs for the last 3 months, today we’re launching a stable release (V1) of the Llama Stack APIs and the corresponding llama-stack server and client packages(v0.1.0). We now have automated tests for providers. These tests make sure that all provider implementations are verified. Developers can now easily and reliably select distributions or providers based on their specific requirements.
@@ -413,70 +514,3 @@ A small but important bug-fix release to update the URL datatype for the client-
 
 ---
 
-# v0.0.62
-Published on: 2024-12-18T02:39:43Z
-
-
-
----
-
-# v0.0.61
-Published on: 2024-12-10T20:50:33Z
-
-
-
----
-
-# v0.0.55
-Published on: 2024-11-23T17:14:07Z
-
-
-
----
-
-# v0.0.54
-Published on: 2024-11-22T00:36:09Z
-
-
-
----
-
-# v0.0.53
-Published on: 2024-11-20T22:18:00Z
-
-🚀  Initial Release Notes for Llama Stack!
-
-### Added
-- Resource-oriented design for models, shields, memory banks, datasets and eval tasks
-- Persistence for registered objects with distribution
-- Ability to persist memory banks created for FAISS
-- PostgreSQL KVStore implementation
-- Environment variable placeholder support in run.yaml files
-- Comprehensive Zero-to-Hero notebooks and quickstart guides
-- Support for quantized models in Ollama
-- Vision models support for Together, Fireworks, Meta-Reference, and Ollama, and vLLM
-- Bedrock distribution with safety shields support
-- Evals API with task registration and scoring functions
-- MMLU and SimpleQA benchmark scoring functions
-- Huggingface dataset provider integration for benchmarks
-- Support for custom dataset registration from local paths
-- Benchmark evaluation CLI tools with visualization tables
-- RAG evaluation scoring functions and metrics
-- Local persistence for datasets and eval tasks
-
-### Changed
-- Split safety into distinct providers (llama-guard, prompt-guard, code-scanner)
-- Changed provider naming convention (`impls` → `inline`, `adapters` → `remote`)
-- Updated API signatures for dataset and eval task registration
-- Restructured folder organization for providers
-- Enhanced Docker build configuration
-- Added version prefixing for REST API routes
-- Enhanced evaluation task registration workflow
-- Improved benchmark evaluation output formatting
-- Restructured evals folder organization for better modularity
-
-### Removed
-- `llama stack configure` command
-
-
----

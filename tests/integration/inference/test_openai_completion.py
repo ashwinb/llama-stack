@@ -6,9 +6,6 @@
 
 
 import pytest
-from openai import OpenAI
-
-from llama_stack.distribution.library_client import LlamaStackAsLibraryClient
 
 from ..test_cases.test_case import TestCase
 
@@ -22,9 +19,6 @@ def provider_from_model(client_with_models, model_id):
 
 
 def skip_if_model_doesnt_support_openai_completion(client_with_models, model_id):
-    if isinstance(client_with_models, LlamaStackAsLibraryClient):
-        pytest.skip("OpenAI completions are not supported when testing with library client yet.")
-
     provider = provider_from_model(client_with_models, model_id)
     if provider.provider_type in (
         "inline::meta-reference",
@@ -44,10 +38,24 @@ def skip_if_model_doesnt_support_openai_completion(client_with_models, model_id)
         pytest.skip(f"Model {model_id} hosted by {provider.provider_type} doesn't support OpenAI completions.")
 
 
-def skip_if_model_doesnt_support_openai_chat_completion(client_with_models, model_id):
-    if isinstance(client_with_models, LlamaStackAsLibraryClient):
-        pytest.skip("OpenAI chat completions are not supported when testing with library client yet.")
+def skip_if_model_doesnt_support_suffix(client_with_models, model_id):
+    # To test `fim` ( fill in the middle ) completion, we need to use a model that supports suffix.
+    # Use this to specifically test this API functionality.
 
+    # pytest -sv --stack-config="inference=starter" \
+    # tests/integration/inference/test_openai_completion.py \
+    # --text-model qwen2.5-coder:1.5b \
+    # -k test_openai_completion_non_streaming_suffix
+
+    if model_id != "qwen2.5-coder:1.5b":
+        pytest.skip(f"Suffix is not supported for the model: {model_id}.")
+
+    provider = provider_from_model(client_with_models, model_id)
+    if provider.provider_type != "remote::ollama":
+        pytest.skip(f"Provider {provider.provider_type} doesn't support suffix.")
+
+
+def skip_if_model_doesnt_support_openai_chat_completion(client_with_models, model_id):
     provider = provider_from_model(client_with_models, model_id)
     if provider.provider_type in (
         "inline::meta-reference",
@@ -57,7 +65,6 @@ def skip_if_model_doesnt_support_openai_chat_completion(client_with_models, mode
         "remote::cerebras",
         "remote::databricks",
         "remote::runpod",
-        "remote::sambanova",
         "remote::tgi",
     ):
         pytest.skip(f"Model {model_id} hosted by {provider.provider_type} doesn't support OpenAI chat completions.")
@@ -69,15 +76,12 @@ def skip_if_provider_isnt_vllm(client_with_models, model_id):
         pytest.skip(f"Model {model_id} hosted by {provider.provider_type} doesn't support vllm extra_body parameters.")
 
 
-@pytest.fixture
-def openai_client(client_with_models):
-    base_url = f"{client_with_models.base_url}/v1/openai/v1"
-    return OpenAI(base_url=base_url, api_key="bar")
-
-
-@pytest.fixture(params=["openai_client", "llama_stack_client"])
-def compat_client(request):
-    return request.getfixturevalue(request.param)
+def skip_if_provider_isnt_openai(client_with_models, model_id):
+    provider = provider_from_model(client_with_models, model_id)
+    if provider.provider_type != "remote::openai":
+        pytest.skip(
+            f"Model {model_id} hosted by {provider.provider_type} doesn't support chat completion calls with base64 encoded files."
+        )
 
 
 @pytest.mark.parametrize(
@@ -100,6 +104,32 @@ def test_openai_completion_non_streaming(llama_stack_client, client_with_models,
     assert len(response.choices) > 0
     choice = response.choices[0]
     assert len(choice.text) > 10
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        "inference:completion:suffix",
+    ],
+)
+def test_openai_completion_non_streaming_suffix(llama_stack_client, client_with_models, text_model_id, test_case):
+    skip_if_model_doesnt_support_openai_completion(client_with_models, text_model_id)
+    skip_if_model_doesnt_support_suffix(client_with_models, text_model_id)
+    tc = TestCase(test_case)
+
+    # ollama needs more verbose prompting for some reason here...
+    response = llama_stack_client.completions.create(
+        model=text_model_id,
+        prompt=tc["content"],
+        stream=False,
+        suffix=tc["suffix"],
+        max_tokens=10,
+    )
+
+    assert len(response.choices) > 0
+    choice = response.choices[0]
+    assert len(choice.text) > 5
+    assert "france" in choice.text.lower()
 
 
 @pytest.mark.parametrize(
@@ -140,9 +170,7 @@ def test_openai_completion_prompt_logprobs(llama_stack_client, client_with_model
         model=text_model_id,
         prompt=prompt,
         stream=False,
-        extra_body={
-            "prompt_logprobs": prompt_logprobs,
-        },
+        prompt_logprobs=prompt_logprobs,
     )
     assert len(response.choices) > 0
     choice = response.choices[0]
@@ -157,9 +185,7 @@ def test_openai_completion_guided_choice(llama_stack_client, client_with_models,
         model=text_model_id,
         prompt=prompt,
         stream=False,
-        extra_body={
-            "guided_choice": ["joy", "sadness"],
-        },
+        guided_choice=["joy", "sadness"],
     )
     assert len(response.choices) > 0
     choice = response.choices[0]
@@ -225,15 +251,52 @@ def test_openai_chat_completion_streaming(compat_client, client_with_models, tex
 
 
 @pytest.mark.parametrize(
+    "test_case",
+    [
+        "inference:chat_completion:streaming_01",
+        "inference:chat_completion:streaming_02",
+    ],
+)
+def test_openai_chat_completion_streaming_with_n(compat_client, client_with_models, text_model_id, test_case):
+    skip_if_model_doesnt_support_openai_chat_completion(client_with_models, text_model_id)
+
+    provider = provider_from_model(client_with_models, text_model_id)
+    if provider.provider_type == "remote::ollama":
+        pytest.skip(f"Model {text_model_id} hosted by {provider.provider_type} doesn't support n > 1.")
+
+    tc = TestCase(test_case)
+    question = tc["question"]
+    expected = tc["expected"]
+
+    response = compat_client.chat.completions.create(
+        model=text_model_id,
+        messages=[{"role": "user", "content": question}],
+        stream=True,
+        timeout=120,  # Increase timeout to 2 minutes for large conversation history,
+        n=2,
+    )
+    streamed_content = {}
+    for chunk in response:
+        for choice in chunk.choices:
+            if choice.delta.content:
+                streamed_content[choice.index] = (
+                    streamed_content.get(choice.index, "") + choice.delta.content.lower().strip()
+                )
+    assert len(streamed_content) == 2
+    for i, content in streamed_content.items():
+        assert expected.lower() in content, f"Choice {i}: Expected {expected.lower()} in {content}"
+
+
+@pytest.mark.parametrize(
     "stream",
     [
         True,
         False,
     ],
 )
-def test_inference_store(openai_client, client_with_models, text_model_id, stream):
+def test_inference_store(compat_client, client_with_models, text_model_id, stream):
     skip_if_model_doesnt_support_openai_chat_completion(client_with_models, text_model_id)
-    client = openai_client
+    client = compat_client
     # make a chat completion
     message = "Hello, world!"
     response = client.chat.completions.create(
@@ -253,18 +316,24 @@ def test_inference_store(openai_client, client_with_models, text_model_id, strea
         for chunk in response:
             if response_id is None:
                 response_id = chunk.id
-            content += chunk.choices[0].delta.content
+            if chunk.choices[0].delta.content:
+                content += chunk.choices[0].delta.content
     else:
         response_id = response.id
         content = response.choices[0].message.content
 
-    responses = client.chat.completions.list()
+    responses = client.chat.completions.list(limit=1000)
     assert response_id in [r.id for r in responses.data]
 
     retrieved_response = client.chat.completions.retrieve(response_id)
     assert retrieved_response.id == response_id
-    assert retrieved_response.input_messages[0]["content"] == message
-    assert retrieved_response.choices[0].message.content == content
+    assert retrieved_response.choices[0].message.content == content, retrieved_response
+
+    input_content = (
+        getattr(retrieved_response.input_messages[0], "content", None)
+        or retrieved_response.input_messages[0]["content"]
+    )
+    assert input_content == message, retrieved_response
 
 
 @pytest.mark.parametrize(
@@ -274,10 +343,9 @@ def test_inference_store(openai_client, client_with_models, text_model_id, strea
         False,
     ],
 )
-@pytest.mark.skip(reason="Very flaky, tool calling really wacky on CI")
-def test_inference_store_tool_calls(openai_client, client_with_models, text_model_id, stream):
+def test_inference_store_tool_calls(compat_client, client_with_models, text_model_id, stream):
     skip_if_model_doesnt_support_openai_chat_completion(client_with_models, text_model_id)
-    client = openai_client
+    client = compat_client
     # make a chat completion
     message = "What's the weather in Tokyo? Use the get_weather function to get the weather."
     response = client.chat.completions.create(
@@ -312,16 +380,64 @@ def test_inference_store_tool_calls(openai_client, client_with_models, text_mode
         for chunk in response:
             if response_id is None:
                 response_id = chunk.id
-            content += chunk.choices[0].delta.content
+            if delta := chunk.choices[0].delta:
+                if delta.content:
+                    content += delta.content
     else:
         response_id = response.id
         content = response.choices[0].message.content
 
-    responses = client.chat.completions.list()
+    responses = client.chat.completions.list(limit=1000)
     assert response_id in [r.id for r in responses.data]
 
     retrieved_response = client.chat.completions.retrieve(response_id)
     assert retrieved_response.id == response_id
-    assert retrieved_response.input_messages[0]["content"] == message
-    assert retrieved_response.choices[0].message.tool_calls[0].function.name == "get_weather"
-    assert retrieved_response.choices[0].message.tool_calls[0].function.arguments == '{"city":"Tokyo"}'
+    input_content = (
+        getattr(retrieved_response.input_messages[0], "content", None)
+        or retrieved_response.input_messages[0]["content"]
+    )
+    assert input_content == message, retrieved_response
+    tool_calls = retrieved_response.choices[0].message.tool_calls
+    # sometimes model doesn't output tool calls, but we still want to test that the tool was called
+    if tool_calls:
+        # because we test with small models, just check that we retrieved
+        # a tool call with a name and arguments string, but ignore contents
+        assert len(tool_calls) == 1
+        assert tool_calls[0].function.name
+        assert tool_calls[0].function.arguments
+    else:
+        # failed tool call parses show up as a message with content, so ensure
+        # that the retrieve response content matches the original request
+        assert retrieved_response.choices[0].message.content == content
+
+
+def test_openai_chat_completion_non_streaming_with_file(openai_client, client_with_models, text_model_id):
+    skip_if_provider_isnt_openai(client_with_models, text_model_id)
+
+    # Hardcoded base64-encoded PDF with "Hello World" text
+    pdf_base64 = "JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPD4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovQ29udGVudHMgNCAwIFIKL1Jlc291cmNlcyA8PAovRm9udCA8PAovRjEgPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+Cj4+Cj4+Cj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxMDAgNzUwIFRkCihIZWxsbyBXb3JsZCkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAzMTUgMDAwMDAgbiAKdHJhaWxlcgo8PAovU2l6ZSA1Ci9Sb290IDEgMCBSCj4+CnN0YXJ0eHJlZgo0MDkKJSVFT0Y="
+
+    response = openai_client.chat.completions.create(
+        model=text_model_id,
+        messages=[
+            {
+                "role": "user",
+                "content": "Describe what you see in this PDF file.",
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "file",
+                        "file": {
+                            "filename": "my-temp-hello-world-pdf",
+                            "file_data": f"data:application/pdf;base64,{pdf_base64}",
+                        },
+                    }
+                ],
+            },
+        ],
+        stream=False,
+    )
+    message_content = response.choices[0].message.content.lower().strip()
+    assert "hello world" in message_content

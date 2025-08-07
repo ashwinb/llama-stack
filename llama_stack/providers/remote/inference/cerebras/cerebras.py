@@ -21,6 +21,7 @@ from llama_stack.apis.inference import (
     Inference,
     LogProbConfig,
     Message,
+    OpenAIEmbeddingsResponse,
     ResponseFormat,
     SamplingParams,
     TextTruncation,
@@ -64,6 +65,7 @@ class CerebrasInferenceAdapter(
         )
         self.config = config
 
+        # TODO: make this use provider data, etc. like other providers
         self.client = AsyncCerebras(
             base_url=self.config.base_url,
             api_key=self.config.api_key.get_secret_value(),
@@ -193,4 +195,14 @@ class CerebrasInferenceAdapter(
         output_dimension: int | None = None,
         task_type: EmbeddingTaskType | None = None,
     ) -> EmbeddingsResponse:
+        raise NotImplementedError()
+
+    async def openai_embeddings(
+        self,
+        model: str,
+        input: str | list[str],
+        encoding_format: str | None = "float",
+        dimensions: int | None = None,
+        user: str | None = None,
+    ) -> OpenAIEmbeddingsResponse:
         raise NotImplementedError()

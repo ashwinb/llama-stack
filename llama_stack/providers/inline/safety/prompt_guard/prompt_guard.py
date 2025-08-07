@@ -18,7 +18,7 @@ from llama_stack.apis.safety import (
     ViolationLevel,
 )
 from llama_stack.apis.shields import Shield
-from llama_stack.distribution.utils.model_utils import model_local_dir
+from llama_stack.core.utils.model_utils import model_local_dir
 from llama_stack.providers.datatypes import ShieldsProtocolPrivate
 from llama_stack.providers.utils.inference.prompt_adapter import (
     interleaved_content_as_str,
@@ -45,6 +45,9 @@ class PromptGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
     async def register_shield(self, shield: Shield) -> None:
         if shield.provider_resource_id != PROMPT_GUARD_MODEL:
             raise ValueError(f"Only {PROMPT_GUARD_MODEL} is supported for Prompt Guard. ")
+
+    async def unregister_shield(self, identifier: str) -> None:
+        pass
 
     async def run_shield(
         self,
@@ -75,7 +78,9 @@ class PromptGuardShield:
         self.temperature = temperature
         self.threshold = threshold
 
-        self.device = "cuda"
+        self.device = "cpu"
+        if torch.cuda.is_available():
+            self.device = "cuda"
 
         # load model and tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_dir)

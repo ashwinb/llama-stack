@@ -10,7 +10,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from llama_stack.distribution.utils.config_dirs import RUNTIME_BASE_DIR
+from llama_stack.core.utils.config_dirs import RUNTIME_BASE_DIR
 
 
 class KVStoreType(Enum):
@@ -37,12 +37,15 @@ class RedisKVStoreConfig(CommonConfig):
         return f"redis://{self.host}:{self.port}"
 
     @classmethod
+    def pip_packages(cls) -> list[str]:
+        return ["redis"]
+
+    @classmethod
     def sample_run_config(cls):
         return {
             "type": "redis",
-            "namespace": None,
-            "host": "${env.REDIS_HOST:localhost}",
-            "port": "${env.REDIS_PORT:6379}",
+            "host": "${env.REDIS_HOST:=localhost}",
+            "port": "${env.REDIS_PORT:=6379}",
         }
 
 
@@ -54,11 +57,14 @@ class SqliteKVStoreConfig(CommonConfig):
     )
 
     @classmethod
+    def pip_packages(cls) -> list[str]:
+        return ["aiosqlite"]
+
+    @classmethod
     def sample_run_config(cls, __distro_dir__: str, db_name: str = "kvstore.db"):
         return {
             "type": "sqlite",
-            "namespace": None,
-            "db_path": "${env.SQLITE_STORE_DIR:" + __distro_dir__ + "}/" + db_name,
+            "db_path": "${env.SQLITE_STORE_DIR:=" + __distro_dir__ + "}/" + db_name,
         }
 
 
@@ -72,16 +78,15 @@ class PostgresKVStoreConfig(CommonConfig):
     table_name: str = "llamastack_kvstore"
 
     @classmethod
-    def sample_run_config(cls, table_name: str = "llamastack_kvstore"):
+    def sample_run_config(cls, table_name: str = "llamastack_kvstore", **kwargs):
         return {
             "type": "postgres",
-            "namespace": None,
-            "host": "${env.POSTGRES_HOST:localhost}",
-            "port": "${env.POSTGRES_PORT:5432}",
-            "db": "${env.POSTGRES_DB}",
-            "user": "${env.POSTGRES_USER}",
-            "password": "${env.POSTGRES_PASSWORD}",
-            "table_name": "${env.POSTGRES_TABLE_NAME:" + table_name + "}",
+            "host": "${env.POSTGRES_HOST:=localhost}",
+            "port": "${env.POSTGRES_PORT:=5432}",
+            "db": "${env.POSTGRES_DB:=llamastack}",
+            "user": "${env.POSTGRES_USER:=llamastack}",
+            "password": "${env.POSTGRES_PASSWORD:=llamastack}",
+            "table_name": "${env.POSTGRES_TABLE_NAME:=" + table_name + "}",
         }
 
     @classmethod
@@ -100,6 +105,10 @@ class PostgresKVStoreConfig(CommonConfig):
             raise ValueError("Table name must be less than 63 characters")
         return v
 
+    @classmethod
+    def pip_packages(cls) -> list[str]:
+        return ["psycopg2-binary"]
+
 
 class MongoDBKVStoreConfig(CommonConfig):
     type: Literal[KVStoreType.mongodb.value] = KVStoreType.mongodb.value
@@ -111,16 +120,19 @@ class MongoDBKVStoreConfig(CommonConfig):
     collection_name: str = "llamastack_kvstore"
 
     @classmethod
+    def pip_packages(cls) -> list[str]:
+        return ["pymongo"]
+
+    @classmethod
     def sample_run_config(cls, collection_name: str = "llamastack_kvstore"):
         return {
             "type": "mongodb",
-            "namespace": None,
-            "host": "${env.MONGODB_HOST:localhost}",
-            "port": "${env.MONGODB_PORT:5432}",
+            "host": "${env.MONGODB_HOST:=localhost}",
+            "port": "${env.MONGODB_PORT:=5432}",
             "db": "${env.MONGODB_DB}",
             "user": "${env.MONGODB_USER}",
             "password": "${env.MONGODB_PASSWORD}",
-            "collection_name": "${env.MONGODB_COLLECTION_NAME:" + collection_name + "}",
+            "collection_name": "${env.MONGODB_COLLECTION_NAME:=" + collection_name + "}",
         }
 
 
@@ -128,3 +140,21 @@ KVStoreConfig = Annotated[
     RedisKVStoreConfig | SqliteKVStoreConfig | PostgresKVStoreConfig | MongoDBKVStoreConfig,
     Field(discriminator="type", default=KVStoreType.sqlite.value),
 ]
+
+
+def get_pip_packages(store_config: dict | KVStoreConfig) -> list[str]:
+    """Get pip packages for KV store config, handling both dict and object cases."""
+    if isinstance(store_config, dict):
+        store_type = store_config.get("type")
+        if store_type == "sqlite":
+            return SqliteKVStoreConfig.pip_packages()
+        elif store_type == "postgres":
+            return PostgresKVStoreConfig.pip_packages()
+        elif store_type == "redis":
+            return RedisKVStoreConfig.pip_packages()
+        elif store_type == "mongodb":
+            return MongoDBKVStoreConfig.pip_packages()
+        else:
+            raise ValueError(f"Unknown KV store type: {store_type}")
+    else:
+        return store_config.pip_packages()

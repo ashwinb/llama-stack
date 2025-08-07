@@ -5,10 +5,12 @@
 # the root directory of this source tree.
 
 
+import asyncio
+import base64
+import uuid
 from collections.abc import AsyncGenerator, AsyncIterator
 from typing import Any
 
-import httpx
 from ollama import AsyncClient  # type: ignore[attr-defined]
 from openai import AsyncOpenAI
 
@@ -18,6 +20,7 @@ from llama_stack.apis.common.content_types import (
     InterleavedContentItem,
     TextContentItem,
 )
+from llama_stack.apis.common.errors import UnsupportedModelError
 from llama_stack.apis.inference import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -32,6 +35,13 @@ from llama_stack.apis.inference import (
     JsonSchemaResponseFormat,
     LogProbConfig,
     Message,
+    OpenAIChatCompletion,
+    OpenAIChatCompletionChunk,
+    OpenAICompletion,
+    OpenAIEmbeddingsResponse,
+    OpenAIEmbeddingUsage,
+    OpenAIMessageParam,
+    OpenAIResponseFormatParam,
     ResponseFormat,
     SamplingParams,
     TextTruncation,
@@ -40,13 +50,6 @@ from llama_stack.apis.inference import (
     ToolDefinition,
     ToolPromptFormat,
 )
-from llama_stack.apis.inference.inference import (
-    OpenAIChatCompletion,
-    OpenAIChatCompletionChunk,
-    OpenAICompletion,
-    OpenAIMessageParam,
-    OpenAIResponseFormatParam,
-)
 from llama_stack.apis.models import Model, ModelType
 from llama_stack.log import get_logger
 from llama_stack.providers.datatypes import (
@@ -54,14 +57,17 @@ from llama_stack.providers.datatypes import (
     HealthStatus,
     ModelsProtocolPrivate,
 )
+from llama_stack.providers.remote.inference.ollama.config import OllamaImplConfig
 from llama_stack.providers.utils.inference.model_registry import (
     ModelRegistryHelper,
 )
 from llama_stack.providers.utils.inference.openai_compat import (
     OpenAICompatCompletionChoice,
     OpenAICompatCompletionResponse,
+    b64_encode_openai_embeddings_response,
     get_sampling_options,
     prepare_openai_completion_params,
+    prepare_openai_embeddings_params,
     process_chat_completion_response,
     process_chat_completion_stream_response,
     process_completion_response,
@@ -73,10 +79,11 @@ from llama_stack.providers.utils.inference.prompt_adapter import (
     content_has_media,
     convert_image_content_to_url,
     interleaved_content_as_str,
+    localize_image_content,
     request_has_media,
 )
 
-from .models import model_entries
+from .models import MODEL_ENTRIES
 
 logger = get_logger(name=__name__, category="inference")
 
@@ -85,21 +92,93 @@ class OllamaInferenceAdapter(
     InferenceProvider,
     ModelsProtocolPrivate,
 ):
-    def __init__(self, url: str) -> None:
-        self.register_helper = ModelRegistryHelper(model_entries)
-        self.url = url
+    # automatically set by the resolver when instantiating the provider
+    __provider_id__: str
+
+    def __init__(self, config: OllamaImplConfig) -> None:
+        self.register_helper = ModelRegistryHelper(MODEL_ENTRIES)
+        self.config = config
+        self._clients: dict[asyncio.AbstractEventLoop, AsyncClient] = {}
+        self._openai_client = None
 
     @property
     def client(self) -> AsyncClient:
-        return AsyncClient(host=self.url)
+        # ollama client attaches itself to the current event loop (sadly?)
+        loop = asyncio.get_running_loop()
+        if loop not in self._clients:
+            self._clients[loop] = AsyncClient(host=self.config.url)
+        return self._clients[loop]
 
     @property
     def openai_client(self) -> AsyncOpenAI:
-        return AsyncOpenAI(base_url=f"{self.url}/v1", api_key="ollama")
+        if self._openai_client is None:
+            url = self.config.url.rstrip("/")
+            self._openai_client = AsyncOpenAI(base_url=f"{url}/v1", api_key="ollama")
+        return self._openai_client
 
     async def initialize(self) -> None:
-        logger.info(f"checking connectivity to Ollama at `{self.url}`...")
-        await self.health()
+        logger.info(f"checking connectivity to Ollama at `{self.config.url}`...")
+        health_response = await self.health()
+        if health_response["status"] == HealthStatus.ERROR:
+            logger.warning(
+                "Ollama Server is not running, make sure to start it using `ollama serve` in a separate terminal"
+            )
+
+    async def should_refresh_models(self) -> bool:
+        return self.config.refresh_models
+
+    async def list_models(self) -> list[Model] | None:
+        provider_id = self.__provider_id__
+        response = await self.client.list()
+
+        # always add the two embedding models which can be pulled on demand
+        models = [
+            Model(
+                identifier="all-minilm:l6-v2",
+                provider_resource_id="all-minilm:l6-v2",
+                provider_id=provider_id,
+                metadata={
+                    "embedding_dimension": 384,
+                    "context_length": 512,
+                },
+                model_type=ModelType.embedding,
+            ),
+            # add all-minilm alias
+            Model(
+                identifier="all-minilm",
+                provider_resource_id="all-minilm:l6-v2",
+                provider_id=provider_id,
+                metadata={
+                    "embedding_dimension": 384,
+                    "context_length": 512,
+                },
+                model_type=ModelType.embedding,
+            ),
+            Model(
+                identifier="nomic-embed-text",
+                provider_resource_id="nomic-embed-text",
+                provider_id=provider_id,
+                metadata={
+                    "embedding_dimension": 768,
+                    "context_length": 8192,
+                },
+                model_type=ModelType.embedding,
+            ),
+        ]
+        for m in response.models:
+            # kill embedding models since we don't know dimensions for them
+            if "bert" in m.details.family:
+                continue
+            models.append(
+                Model(
+                    identifier=m.model,
+                    provider_resource_id=m.model,
+                    provider_id=provider_id,
+                    metadata={},
+                    model_type=ModelType.llm,
+                )
+            )
+        return models
 
     async def health(self) -> HealthResponse:
         """
@@ -112,13 +191,11 @@ class OllamaInferenceAdapter(
         try:
             await self.client.ps()
             return HealthResponse(status=HealthStatus.OK)
-        except httpx.ConnectError as e:
-            raise RuntimeError(
-                "Ollama Server is not running, start it using `ollama serve` in a separate terminal"
-            ) from e
+        except Exception as e:
+            return HealthResponse(status=HealthStatus.ERROR, message=f"Health check failed: {str(e)}")
 
     async def shutdown(self) -> None:
-        pass
+        self._clients.clear()
 
     async def unregister_model(self, model_id: str) -> None:
         pass
@@ -343,32 +420,71 @@ class OllamaInferenceAdapter(
             model = await self.register_helper.register_model(model)
         except ValueError:
             pass  # Ignore statically unknown model, will check live listing
+
         if model.model_type == ModelType.embedding:
-            logger.info(f"Pulling embedding model `{model.provider_resource_id}` if necessary...")
-            await self.client.pull(model.provider_resource_id)
+            response = await self.client.list()
+            if model.provider_resource_id not in [m.model for m in response.models]:
+                await self.client.pull(model.provider_resource_id)
+
         # we use list() here instead of ps() -
         #  - ps() only lists running models, not available models
         #  - models not currently running are run by the ollama server as needed
         response = await self.client.list()
-        available_models = [m["model"] for m in response["models"]]
-        if model.provider_resource_id is None:
-            raise ValueError("Model provider_resource_id cannot be None")
-        provider_resource_id = self.register_helper.get_provider_model_id(model.provider_resource_id)
-        if provider_resource_id is None:
-            provider_resource_id = model.provider_resource_id
+        available_models = [m.model for m in response.models]
+
+        provider_resource_id = model.provider_resource_id
+        assert provider_resource_id is not None  # mypy
         if provider_resource_id not in available_models:
-            available_models_latest = [m["model"].split(":latest")[0] for m in response["models"]]
+            available_models_latest = [m.model.split(":latest")[0] for m in response.models]
             if provider_resource_id in available_models_latest:
                 logger.warning(
                     f"Imprecise provider resource id was used but 'latest' is available in Ollama - using '{model.provider_resource_id}:latest'"
                 )
                 return model
-            raise ValueError(
-                f"Model '{model.provider_resource_id}' is not available in Ollama. Available models: {', '.join(available_models)}"
-            )
+            raise UnsupportedModelError(provider_resource_id, available_models)
+
+        # mutating this should be considered an anti-pattern
         model.provider_resource_id = provider_resource_id
 
         return model
+
+    async def openai_embeddings(
+        self,
+        model: str,
+        input: str | list[str],
+        encoding_format: str | None = "float",
+        dimensions: int | None = None,
+        user: str | None = None,
+    ) -> OpenAIEmbeddingsResponse:
+        model_obj = await self._get_model(model)
+        if model_obj.model_type != ModelType.embedding:
+            raise ValueError(f"Model {model} is not an embedding model")
+
+        if model_obj.provider_resource_id is None:
+            raise ValueError(f"Model {model} has no provider_resource_id set")
+
+        # Note, at the moment Ollama does not support encoding_format, dimensions, and user parameters
+        params = prepare_openai_embeddings_params(
+            model=model_obj.provider_resource_id,
+            input=input,
+            encoding_format=encoding_format,
+            dimensions=dimensions,
+            user=user,
+        )
+
+        response = await self.openai_client.embeddings.create(**params)
+        data = b64_encode_openai_embeddings_response(response.data, encoding_format)
+
+        usage = OpenAIEmbeddingUsage(
+            prompt_tokens=response.usage.prompt_tokens,
+            total_tokens=response.usage.total_tokens,
+        )
+        # TODO: Investigate why model_obj.identifier is used instead of response.model
+        return OpenAIEmbeddingsResponse(
+            data=data,
+            model=model_obj.identifier,
+            usage=usage,
+        )
 
     async def openai_completion(
         self,
@@ -391,6 +507,7 @@ class OllamaInferenceAdapter(
         user: str | None = None,
         guided_choice: list[str] | None = None,
         prompt_logprobs: int | None = None,
+        suffix: str | None = None,
     ) -> OpenAICompletion:
         if not isinstance(prompt, str):
             raise ValueError("Ollama does not support non-string prompts for completion")
@@ -414,6 +531,7 @@ class OllamaInferenceAdapter(
             temperature=temperature,
             top_p=top_p,
             user=user,
+            suffix=suffix,
         )
         return await self.openai_client.completions.create(**params)  # type: ignore
 
@@ -444,6 +562,21 @@ class OllamaInferenceAdapter(
         user: str | None = None,
     ) -> OpenAIChatCompletion | AsyncIterator[OpenAIChatCompletionChunk]:
         model_obj = await self._get_model(model)
+
+        # Ollama does not support image urls, so we need to download the image and convert it to base64
+        async def _convert_message(m: OpenAIMessageParam) -> OpenAIMessageParam:
+            if isinstance(m.content, list):
+                for c in m.content:
+                    if c.type == "image_url" and c.image_url and c.image_url.url:
+                        localize_result = await localize_image_content(c.image_url.url)
+                        if localize_result is None:
+                            raise ValueError(f"Failed to localize image content from {c.image_url.url}")
+
+                        content, format = localize_result
+                        c.image_url.url = f"data:image/{format};base64,{base64.b64encode(content).decode('utf-8')}"
+            return m
+
+        messages = [await _convert_message(m) for m in messages]
         params = await prepare_openai_completion_params(
             model=model_obj.provider_resource_id,
             messages=messages,
@@ -469,7 +602,25 @@ class OllamaInferenceAdapter(
             top_p=top_p,
             user=user,
         )
-        return await self.openai_client.chat.completions.create(**params)  # type: ignore
+        response = await self.openai_client.chat.completions.create(**params)
+        return await self._adjust_ollama_chat_completion_response_ids(response)
+
+    async def _adjust_ollama_chat_completion_response_ids(
+        self,
+        response: OpenAIChatCompletion | AsyncIterator[OpenAIChatCompletionChunk],
+    ) -> OpenAIChatCompletion | AsyncIterator[OpenAIChatCompletionChunk]:
+        id = f"chatcmpl-{uuid.uuid4()}"
+        if isinstance(response, AsyncIterator):
+
+            async def stream_with_chunk_ids() -> AsyncIterator[OpenAIChatCompletionChunk]:
+                async for chunk in response:
+                    chunk.id = id
+                    yield chunk
+
+            return stream_with_chunk_ids()
+        else:
+            response.id = id
+            return response
 
     async def batch_completion(
         self,

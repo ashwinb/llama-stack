@@ -25,14 +25,14 @@ from llama_stack.apis.tools import (
     RAGQueryConfig,
     RAGQueryResult,
     RAGToolRuntime,
-    Tool,
     ToolDef,
+    ToolGroup,
     ToolInvocationResult,
     ToolParameter,
     ToolRuntime,
 )
 from llama_stack.apis.vector_io import QueryChunksResponse, VectorIO
-from llama_stack.providers.datatypes import ToolsProtocolPrivate
+from llama_stack.providers.datatypes import ToolGroupsProtocolPrivate
 from llama_stack.providers.utils.inference.prompt_adapter import interleaved_content_as_str
 from llama_stack.providers.utils.memory.vector_store import (
     content_from_doc,
@@ -49,7 +49,7 @@ def make_random_string(length: int = 8):
     return "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(length))
 
 
-class MemoryToolRuntimeImpl(ToolsProtocolPrivate, ToolRuntime, RAGToolRuntime):
+class MemoryToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, RAGToolRuntime):
     def __init__(
         self,
         config: RagToolRuntimeConfig,
@@ -66,10 +66,10 @@ class MemoryToolRuntimeImpl(ToolsProtocolPrivate, ToolRuntime, RAGToolRuntime):
     async def shutdown(self):
         pass
 
-    async def register_tool(self, tool: Tool) -> None:
+    async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
         pass
 
-    async def unregister_tool(self, tool_id: str) -> None:
+    async def unregister_toolgroup(self, toolgroup_id: str) -> None:
         return
 
     async def insert(
@@ -81,6 +81,7 @@ class MemoryToolRuntimeImpl(ToolsProtocolPrivate, ToolRuntime, RAGToolRuntime):
         chunks = []
         for doc in documents:
             content = await content_from_doc(doc)
+            # TODO: we should add enrichment here as URLs won't be added to the metadata by default
             chunks.extend(
                 make_overlapped_chunks(
                     doc.document_id,
@@ -121,8 +122,10 @@ class MemoryToolRuntimeImpl(ToolsProtocolPrivate, ToolRuntime, RAGToolRuntime):
                 vector_db_id=vector_db_id,
                 query=query,
                 params={
-                    "max_chunks": query_config.max_chunks,
                     "mode": query_config.mode,
+                    "max_chunks": query_config.max_chunks,
+                    "score_threshold": 0.0,
+                    "ranker": query_config.ranker,
                 },
             )
             for vector_db_id in vector_db_ids
@@ -146,7 +149,7 @@ class MemoryToolRuntimeImpl(ToolsProtocolPrivate, ToolRuntime, RAGToolRuntime):
         ]
         for i, chunk in enumerate(chunks):
             metadata = chunk.metadata
-            tokens += metadata["token_count"]
+            tokens += metadata.get("token_count", 0)
             tokens += metadata.get("metadata_token_count", 0)
 
             if tokens > query_config.max_tokens_in_context:
@@ -155,8 +158,24 @@ class MemoryToolRuntimeImpl(ToolsProtocolPrivate, ToolRuntime, RAGToolRuntime):
                 )
                 break
 
-            metadata_subset = {k: v for k, v in metadata.items() if k not in ["token_count", "metadata_token_count"]}
-            text_content = query_config.chunk_template.format(index=i + 1, chunk=chunk, metadata=metadata_subset)
+            # Add useful keys from chunk_metadata to metadata and remove some from metadata
+            chunk_metadata_keys_to_include_from_context = [
+                "chunk_id",
+                "document_id",
+                "source",
+            ]
+            metadata_keys_to_exclude_from_context = [
+                "token_count",
+                "metadata_token_count",
+            ]
+            metadata_for_context = {}
+            for k in chunk_metadata_keys_to_include_from_context:
+                metadata_for_context[k] = getattr(chunk.chunk_metadata, k)
+            for k in metadata:
+                if k not in metadata_keys_to_exclude_from_context:
+                    metadata_for_context[k] = metadata[k]
+
+            text_content = query_config.chunk_template.format(index=i + 1, chunk=chunk, metadata=metadata_for_context)
             picked.append(TextContentItem(text=text_content))
 
         picked.append(TextContentItem(text="END of knowledge_search tool results.\n"))
@@ -170,6 +189,8 @@ class MemoryToolRuntimeImpl(ToolsProtocolPrivate, ToolRuntime, RAGToolRuntime):
             content=picked,
             metadata={
                 "document_ids": [c.metadata["document_id"] for c in chunks[: len(picked)]],
+                "chunks": [c.content for c in chunks[: len(picked)]],
+                "scores": scores[: len(picked)],
             },
         )
 

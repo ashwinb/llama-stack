@@ -1,8 +1,8 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { ChatCompletionsTable } from "./chat-completion-table";
-import { ChatCompletion } from "@/lib/types"; // Assuming this path is correct
+import { ChatCompletionsTable } from "./chat-completions-table";
+import { ChatCompletion } from "@/lib/types";
 
 // Mock next/navigation
 const mockPush = jest.fn();
@@ -12,93 +12,158 @@ jest.mock("next/navigation", () => ({
   }),
 }));
 
+// Mock next-auth
+jest.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { accessToken: "mock-token" },
+  }),
+}));
+
 // Mock helper functions
-// These are hoisted, so their mocks are available throughout the file
 jest.mock("@/lib/truncate-text");
-jest.mock("@/lib/format-tool-call");
+jest.mock("@/lib/format-message-content");
+
+// Mock the auth client hook
+const mockClient = {
+  chat: {
+    completions: {
+      list: jest.fn(),
+    },
+  },
+};
+
+jest.mock("@/hooks/use-auth-client", () => ({
+  useAuthClient: () => mockClient,
+}));
+
+// Mock the usePagination hook
+const mockLoadMore = jest.fn();
+jest.mock("@/hooks/use-pagination", () => ({
+  usePagination: jest.fn(() => ({
+    data: [],
+    status: "idle",
+    hasMore: false,
+    error: null,
+    loadMore: mockLoadMore,
+  })),
+}));
 
 // Import the mocked functions to set up default or specific implementations
 import { truncateText as originalTruncateText } from "@/lib/truncate-text";
-import { formatToolCallToString as originalFormatToolCallToString } from "@/lib/format-tool-call";
+import {
+  extractTextFromContentPart as originalExtractTextFromContentPart,
+  extractDisplayableText as originalExtractDisplayableText,
+} from "@/lib/format-message-content";
+
+// Import the mocked hook
+import { usePagination } from "@/hooks/use-pagination";
+const mockedUsePagination = usePagination as jest.MockedFunction<
+  typeof usePagination
+>;
 
 // Cast to jest.Mock for typings
 const truncateText = originalTruncateText as jest.Mock;
-const formatToolCallToString = originalFormatToolCallToString as jest.Mock;
+const extractTextFromContentPart =
+  originalExtractTextFromContentPart as jest.Mock;
+const extractDisplayableText = originalExtractDisplayableText as jest.Mock;
 
 describe("ChatCompletionsTable", () => {
-  const defaultProps = {
-    completions: [] as ChatCompletion[],
-    isLoading: false,
-    error: null,
-  };
+  const defaultProps = {};
 
   beforeEach(() => {
     // Reset all mocks before each test
     mockPush.mockClear();
     truncateText.mockClear();
-    formatToolCallToString.mockClear();
+    extractTextFromContentPart.mockClear();
+    extractDisplayableText.mockClear();
+    mockLoadMore.mockClear();
+    jest.clearAllMocks();
 
-    // Default pass-through implementation for tests not focusing on truncation/formatting
+    // Default pass-through implementations
     truncateText.mockImplementation((text: string | undefined) => text);
-    formatToolCallToString.mockImplementation((toolCall: any) =>
-      toolCall && typeof toolCall === "object" && toolCall.name
-        ? `[DefaultToolCall:${toolCall.name}]`
-        : "[InvalidToolCall]",
+    extractTextFromContentPart.mockImplementation((content: unknown) =>
+      typeof content === "string" ? content : "extracted text",
     );
+    extractDisplayableText.mockImplementation((message: unknown) => {
+      const msg = message as { content?: string };
+      return msg?.content || "extracted output";
+    });
+
+    // Default hook return value
+    mockedUsePagination.mockReturnValue({
+      data: [],
+      status: "idle",
+      hasMore: false,
+      error: null,
+      loadMore: mockLoadMore,
+    });
   });
 
   test("renders without crashing with default props", () => {
     render(<ChatCompletionsTable {...defaultProps} />);
-    // Check for a unique element that should be present in the non-empty, non-loading, non-error state
-    // For now, as per Task 1, we will test the empty state message
     expect(screen.getByText("No chat completions found.")).toBeInTheDocument();
   });
 
   test("click on a row navigates to the correct URL", () => {
-    const { rerender } = render(<ChatCompletionsTable {...defaultProps} />);
+    const mockData: ChatCompletion[] = [
+      {
+        id: "completion_123",
+        choices: [
+          {
+            message: { role: "assistant", content: "Test response" },
+            finish_reason: "stop",
+            index: 0,
+          },
+        ],
+        object: "chat.completion",
+        created: 1234567890,
+        model: "test-model",
+        input_messages: [{ role: "user", content: "Test prompt" }],
+      },
+    ];
 
-    // Simulate a scenario where a completion exists and is clicked
-    const mockCompletion: ChatCompletion = {
-      id: "comp_123",
-      object: "chat.completion",
-      created: Math.floor(Date.now() / 1000),
-      model: "llama-test-model",
-      choices: [
-        {
-          index: 0,
-          message: { role: "assistant", content: "Test output" },
-          finish_reason: "stop",
-        },
-      ],
-      input_messages: [{ role: "user", content: "Test input" }],
-    };
+    // Configure the mock to return our test data
+    mockedUsePagination.mockReturnValue({
+      data: mockData,
+      status: "idle",
+      hasMore: false,
+      error: null,
+      loadMore: mockLoadMore,
+    });
 
-    rerender(
-      <ChatCompletionsTable {...defaultProps} completions={[mockCompletion]} />,
-    );
-    const row = screen.getByText("Test input").closest("tr");
+    render(<ChatCompletionsTable {...defaultProps} />);
+
+    const row = screen.getByText("Test prompt").closest("tr");
     if (row) {
       fireEvent.click(row);
-      expect(mockPush).toHaveBeenCalledWith("/logs/chat-completions/comp_123");
+      expect(mockPush).toHaveBeenCalledWith(
+        "/logs/chat-completions/completion_123",
+      );
     } else {
-      throw new Error('Row with "Test input" not found for router mock test.');
+      throw new Error('Row with "Test prompt" not found for router mock test.');
     }
   });
 
   describe("Loading State", () => {
     test("renders skeleton UI when isLoading is true", () => {
-      const { container } = render(
-        <ChatCompletionsTable {...defaultProps} isLoading={true} />,
-      );
+      mockedUsePagination.mockReturnValue({
+        data: [],
+        status: "loading",
+        hasMore: false,
+        error: null,
+        loadMore: mockLoadMore,
+      });
 
-      // The Skeleton component uses data-slot="skeleton"
-      const skeletonSelector = '[data-slot="skeleton"]';
+      const { container } = render(<ChatCompletionsTable {...defaultProps} />);
 
       // Check for skeleton in the table caption
       const tableCaption = container.querySelector("caption");
       expect(tableCaption).toBeInTheDocument();
       if (tableCaption) {
-        const captionSkeleton = tableCaption.querySelector(skeletonSelector);
+        const captionSkeleton = tableCaption.querySelector(
+          '[data-slot="skeleton"]',
+        );
         expect(captionSkeleton).toBeInTheDocument();
       }
 
@@ -107,62 +172,58 @@ describe("ChatCompletionsTable", () => {
       expect(tableBody).toBeInTheDocument();
       if (tableBody) {
         const bodySkeletons = tableBody.querySelectorAll(
-          `td ${skeletonSelector}`,
+          '[data-slot="skeleton"]',
         );
-        expect(bodySkeletons.length).toBeGreaterThan(0); // Ensure at least one skeleton cell exists
+        expect(bodySkeletons.length).toBeGreaterThan(0);
       }
-
-      // General check: ensure multiple skeleton elements are present in the table overall
-      const allSkeletonsInTable = container.querySelectorAll(
-        `table ${skeletonSelector}`,
-      );
-      expect(allSkeletonsInTable.length).toBeGreaterThan(3); // e.g., caption + at least one row of 3 cells, or just a few
     });
   });
 
   describe("Error State", () => {
     test("renders error message when error prop is provided", () => {
       const errorMessage = "Network Error";
-      render(
-        <ChatCompletionsTable
-          {...defaultProps}
-          error={{ name: "Error", message: errorMessage }}
-        />,
-      );
+      mockedUsePagination.mockReturnValue({
+        data: [],
+        status: "error",
+        hasMore: false,
+        error: { name: "Error", message: errorMessage } as Error,
+        loadMore: mockLoadMore,
+      });
+
+      render(<ChatCompletionsTable {...defaultProps} />);
       expect(
-        screen.getByText(`Error fetching data: ${errorMessage}`),
+        screen.getByText("Unable to load chat completions"),
       ).toBeInTheDocument();
+      expect(screen.getByText(errorMessage)).toBeInTheDocument();
     });
 
-    test("renders default error message when error.message is not available", () => {
-      render(
-        <ChatCompletionsTable
-          {...defaultProps}
-          error={{ name: "Error", message: "" }}
-        />,
-      ); // Error with empty message
-      expect(
-        screen.getByText("Error fetching data: An unknown error occurred"),
-      ).toBeInTheDocument();
-    });
+    test.each([{ name: "Error", message: "" }, {}])(
+      "renders default error message when error has no message",
+      (errorObject) => {
+        mockedUsePagination.mockReturnValue({
+          data: [],
+          status: "error",
+          hasMore: false,
+          error: errorObject as Error,
+          loadMore: mockLoadMore,
+        });
 
-    test("renders default error message when error prop is an object without message", () => {
-      render(<ChatCompletionsTable {...defaultProps} error={{} as Error} />); // Empty error object
-      expect(
-        screen.getByText("Error fetching data: An unknown error occurred"),
-      ).toBeInTheDocument();
-    });
+        render(<ChatCompletionsTable {...defaultProps} />);
+        expect(
+          screen.getByText("Unable to load chat completions"),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(
+            "An unexpected error occurred while loading the data.",
+          ),
+        ).toBeInTheDocument();
+      },
+    );
   });
 
   describe("Empty State", () => {
-    test('renders "No chat completions found." and no table when completions array is empty', () => {
-      render(
-        <ChatCompletionsTable
-          completions={[]}
-          isLoading={false}
-          error={null}
-        />,
-      );
+    test('renders "No chat completions found." and no table when data array is empty', () => {
+      render(<ChatCompletionsTable {...defaultProps} />);
       expect(
         screen.getByText("No chat completions found."),
       ).toBeInTheDocument();
@@ -175,11 +236,11 @@ describe("ChatCompletionsTable", () => {
 
   describe("Data Rendering", () => {
     test("renders table caption, headers, and completion data correctly", () => {
-      const mockCompletions = [
+      const mockCompletions: ChatCompletion[] = [
         {
           id: "comp_1",
           object: "chat.completion",
-          created: 1710000000, // Fixed timestamp for test
+          created: 1710000000,
           model: "llama-test-model",
           choices: [
             {
@@ -206,13 +267,28 @@ describe("ChatCompletionsTable", () => {
         },
       ];
 
-      render(
-        <ChatCompletionsTable
-          completions={mockCompletions}
-          isLoading={false}
-          error={null}
-        />,
-      );
+      // Set up mocks to return expected values
+      extractTextFromContentPart.mockImplementation((content: unknown) => {
+        if (content === "Test input") return "Test input";
+        if (content === "Another input") return "Another input";
+        return "extracted text";
+      });
+      extractDisplayableText.mockImplementation((message: unknown) => {
+        const msg = message as { content?: string };
+        if (msg?.content === "Test output") return "Test output";
+        if (msg?.content === "Another output") return "Another output";
+        return "extracted output";
+      });
+
+      mockedUsePagination.mockReturnValue({
+        data: mockCompletions,
+        status: "idle",
+        hasMore: false,
+        error: null,
+        loadMore: mockLoadMore,
+      });
+
+      render(<ChatCompletionsTable {...defaultProps} />);
 
       // Table caption
       expect(
@@ -242,7 +318,7 @@ describe("ChatCompletionsTable", () => {
     });
   });
 
-  describe("Text Truncation and Tool Call Formatting", () => {
+  describe("Text Truncation and Content Extraction", () => {
     test("truncates long input and output text", () => {
       // Specific mock implementation for this test
       truncateText.mockImplementation(
@@ -259,7 +335,11 @@ describe("ChatCompletionsTable", () => {
         "This is a very long input message that should be truncated.";
       const longOutput =
         "This is a very long output message that should also be truncated.";
-      const mockCompletions = [
+
+      extractTextFromContentPart.mockReturnValue(longInput);
+      extractDisplayableText.mockReturnValue(longOutput);
+
+      const mockCompletions: ChatCompletion[] = [
         {
           id: "comp_trunc",
           object: "chat.completion",
@@ -276,65 +356,72 @@ describe("ChatCompletionsTable", () => {
         },
       ];
 
-      render(
-        <ChatCompletionsTable
-          completions={mockCompletions}
-          isLoading={false}
-          error={null}
-        />,
-      );
+      mockedUsePagination.mockReturnValue({
+        data: mockCompletions,
+        status: "idle",
+        hasMore: false,
+        error: null,
+        loadMore: mockLoadMore,
+      });
+
+      render(<ChatCompletionsTable {...defaultProps} />);
 
       // The truncated text should be present for both input and output
       const truncatedTexts = screen.getAllByText(
         longInput.slice(0, 10) + "...",
       );
       expect(truncatedTexts.length).toBe(2); // one for input, one for output
-      // Optionally, verify each one is in the document if getAllByText doesn't throw on not found
-      truncatedTexts.forEach((textElement) =>
-        expect(textElement).toBeInTheDocument(),
-      );
     });
 
-    test("formats tool call output using formatToolCallToString", () => {
-      // Specific mock implementation for this test
-      formatToolCallToString.mockImplementation(
-        (toolCall: any) => `[TOOL:${toolCall.name}]`,
-      );
-      // Ensure no truncation interferes for this specific test for clarity of tool call format
-      truncateText.mockImplementation((text: string | undefined) => text);
+    test("uses content extraction functions correctly", () => {
+      const complexMessage = [
+        { type: "text", text: "Extracted input" },
+        { type: "image", url: "http://example.com/image.png" },
+      ];
+      const assistantMessage = {
+        role: "assistant",
+        content: "Extracted output from assistant",
+      };
 
-      const toolCall = { name: "search", args: { query: "llama" } };
-      const mockCompletions = [
+      const mockCompletions: ChatCompletion[] = [
         {
-          id: "comp_tool",
+          id: "comp_extract",
           object: "chat.completion",
           created: 1710003000,
-          model: "llama-tool-model",
+          model: "llama-extract-model",
           choices: [
             {
               index: 0,
-              message: {
-                role: "assistant",
-                content: "Tool output", // Content that will be prepended
-                tool_calls: [toolCall],
-              },
+              message: assistantMessage,
               finish_reason: "stop",
             },
           ],
-          input_messages: [{ role: "user", content: "Tool input" }],
+          input_messages: [{ role: "user", content: complexMessage }],
         },
       ];
 
-      render(
-        <ChatCompletionsTable
-          completions={mockCompletions}
-          isLoading={false}
-          error={null}
-        />,
-      );
+      extractTextFromContentPart.mockReturnValue("Extracted input");
+      extractDisplayableText.mockReturnValue("Extracted output from assistant");
 
-      // The component concatenates message.content and the formatted tool call
-      expect(screen.getByText("Tool output [TOOL:search]")).toBeInTheDocument();
+      mockedUsePagination.mockReturnValue({
+        data: mockCompletions,
+        status: "idle",
+        hasMore: false,
+        error: null,
+        loadMore: mockLoadMore,
+      });
+
+      render(<ChatCompletionsTable {...defaultProps} />);
+
+      // Verify the extraction functions were called
+      expect(extractTextFromContentPart).toHaveBeenCalledWith(complexMessage);
+      expect(extractDisplayableText).toHaveBeenCalledWith(assistantMessage);
+
+      // Verify the extracted text appears in the table
+      expect(screen.getByText("Extracted input")).toBeInTheDocument();
+      expect(
+        screen.getByText("Extracted output from assistant"),
+      ).toBeInTheDocument();
     });
   });
 });

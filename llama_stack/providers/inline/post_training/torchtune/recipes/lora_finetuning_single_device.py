@@ -7,7 +7,7 @@
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -43,8 +43,8 @@ from llama_stack.apis.post_training import (
     QATFinetuningConfig,
     TrainingConfig,
 )
-from llama_stack.distribution.utils.config_dirs import DEFAULT_CHECKPOINT_DIR
-from llama_stack.distribution.utils.model_utils import model_local_dir
+from llama_stack.core.utils.config_dirs import DEFAULT_CHECKPOINT_DIR
+from llama_stack.core.utils.model_utils import model_local_dir
 from llama_stack.models.llama.sku_list import resolve_model
 from llama_stack.providers.inline.post_training.common.utils import evacuate_model_from_device
 from llama_stack.providers.inline.post_training.torchtune.common import utils
@@ -537,7 +537,7 @@ class LoraFinetuningSingleDevice:
             checkpoint_path = await self.save_checkpoint(epoch=curr_epoch)
             checkpoint = Checkpoint(
                 identifier=f"{self.model_id}-sft-{curr_epoch}",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 epoch=curr_epoch,
                 post_training_job_id=self.job_uuid,
                 path=checkpoint_path,

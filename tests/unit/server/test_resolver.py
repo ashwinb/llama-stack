@@ -9,18 +9,17 @@ import sys
 from typing import Any, Protocol
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from pydantic import BaseModel, Field
 
 from llama_stack.apis.inference import Inference
-from llama_stack.distribution.datatypes import (
+from llama_stack.core.datatypes import (
     Api,
     Provider,
     StackRunConfig,
 )
-from llama_stack.distribution.resolver import resolve_impls
-from llama_stack.distribution.routers.routers import InferenceRouter
-from llama_stack.distribution.routers.routing_tables import ModelsRoutingTable
+from llama_stack.core.resolver import resolve_impls
+from llama_stack.core.routers.inference import InferenceRouter
+from llama_stack.core.routing_tables.models import ModelsRoutingTable
 from llama_stack.providers.datatypes import InlineProviderSpec, ProviderSpec
 
 
@@ -66,7 +65,6 @@ class SampleImpl:
         pass
 
 
-@pytest.mark.asyncio
 async def test_resolve_impls_basic():
     # Create a real provider spec
     provider_spec = InlineProviderSpec(
@@ -100,9 +98,10 @@ async def test_resolve_impls_basic():
     add_protocol_methods(SampleImpl, Inference)
 
     mock_module.get_provider_impl = AsyncMock(return_value=impl)
+    mock_module.get_provider_impl.__text_signature__ = "()"
     sys.modules["test_module"] = mock_module
 
-    impls = await resolve_impls(run_config, provider_registry, dist_registry)
+    impls = await resolve_impls(run_config, provider_registry, dist_registry, policy={})
 
     assert Api.inference in impls
     assert isinstance(impls[Api.inference], InferenceRouter)

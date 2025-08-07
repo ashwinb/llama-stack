@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from llama_stack.apis.models.models import ModelType
+from llama_stack.apis.models import ModelType
 from llama_stack.models.llama.sku_types import CoreModelId
 from llama_stack.providers.utils.inference.model_registry import (
     ProviderModelEntry,
@@ -12,7 +12,20 @@ from llama_stack.providers.utils.inference.model_registry import (
     build_model_entry,
 )
 
-model_entries = [
+SAFETY_MODELS_ENTRIES = [
+    # The Llama Guard models don't have their full fp16 versions
+    # so we are going to alias their default version to the canonical SKU
+    build_hf_repo_model_entry(
+        "llama-guard3:8b",
+        CoreModelId.llama_guard_3_8b.value,
+    ),
+    build_hf_repo_model_entry(
+        "llama-guard3:1b",
+        CoreModelId.llama_guard_3_1b.value,
+    ),
+]
+
+MODEL_ENTRIES = [
     build_hf_repo_model_entry(
         "llama3.1:8b-instruct-fp16",
         CoreModelId.llama3_1_8b_instruct.value,
@@ -73,18 +86,8 @@ model_entries = [
         "llama3.3:70b",
         CoreModelId.llama3_3_70b_instruct.value,
     ),
-    # The Llama Guard models don't have their full fp16 versions
-    # so we are going to alias their default version to the canonical SKU
-    build_hf_repo_model_entry(
-        "llama-guard3:8b",
-        CoreModelId.llama_guard_3_8b.value,
-    ),
-    build_hf_repo_model_entry(
-        "llama-guard3:1b",
-        CoreModelId.llama_guard_3_1b.value,
-    ),
     ProviderModelEntry(
-        provider_model_id="all-minilm:latest",
+        provider_model_id="all-minilm:l6-v2",
         aliases=["all-minilm"],
         model_type=ModelType.embedding,
         metadata={
@@ -100,4 +103,4 @@ model_entries = [
             "context_length": 8192,
         },
     ),
-]
+] + SAFETY_MODELS_ENTRIES

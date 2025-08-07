@@ -23,6 +23,7 @@ from llama_stack.apis.inference import (
     Inference,
     LogProbConfig,
     Message,
+    OpenAIEmbeddingsResponse,
     ResponseFormat,
     ResponseFormatType,
     SamplingParams,
@@ -291,9 +292,21 @@ class _HfAdapter(
     ) -> EmbeddingsResponse:
         raise NotImplementedError()
 
+    async def openai_embeddings(
+        self,
+        model: str,
+        input: str | list[str],
+        encoding_format: str | None = "float",
+        dimensions: int | None = None,
+        user: str | None = None,
+    ) -> OpenAIEmbeddingsResponse:
+        raise NotImplementedError()
+
 
 class TGIAdapter(_HfAdapter):
     async def initialize(self, config: TGIImplConfig) -> None:
+        if not config.url:
+            raise ValueError("You must provide a URL in run.yaml (or via the TGI_URL environment variable) to use TGI.")
         log.info(f"Initializing TGI client with url={config.url}")
         self.client = AsyncInferenceClient(
             model=config.url,
@@ -316,7 +329,6 @@ class InferenceEndpointAdapter(_HfAdapter):
         # Get the inference endpoint details
         api = HfApi(token=config.api_token.get_secret_value())
         endpoint = api.get_inference_endpoint(config.endpoint_name)
-
         # Wait for the endpoint to be ready (if not already)
         endpoint.wait(timeout=60)
 

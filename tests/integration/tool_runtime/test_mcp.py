@@ -10,8 +10,7 @@ import pytest
 from llama_stack_client import Agent
 
 from llama_stack import LlamaStackAsLibraryClient
-from llama_stack.apis.models import ModelType
-from llama_stack.distribution.datatypes import AuthenticationRequiredError
+from llama_stack.core.datatypes import AuthenticationRequiredError
 
 AUTH_TOKEN = "test-token"
 
@@ -24,44 +23,34 @@ def mcp_server():
         yield mcp_server_info
 
 
-def test_mcp_invocation(llama_stack_client, mcp_server):
+def test_mcp_invocation(llama_stack_client, text_model_id, mcp_server):
     if not isinstance(llama_stack_client, LlamaStackAsLibraryClient):
         pytest.skip("The local MCP server only reliably reachable from library client.")
 
     test_toolgroup_id = MCP_TOOLGROUP_ID
     uri = mcp_server["server_url"]
 
-    # registering itself should fail since it requires listing tools
-    with pytest.raises(Exception, match="Unauthorized"):
-        llama_stack_client.toolgroups.register(
-            toolgroup_id=test_toolgroup_id,
-            provider_id="model-context-protocol",
-            mcp_endpoint=dict(uri=uri),
-        )
+    # registering should not raise an error anymore even if you don't specify the auth token
+    llama_stack_client.toolgroups.register(
+        toolgroup_id=test_toolgroup_id,
+        provider_id="model-context-protocol",
+        mcp_endpoint=dict(uri=uri),
+    )
 
     provider_data = {
         "mcp_headers": {
-            uri: [
-                f"Authorization: Bearer {AUTH_TOKEN}",
-            ],
+            uri: {
+                "Authorization": f"Bearer {AUTH_TOKEN}",
+            },
         },
     }
     auth_headers = {
         "X-LlamaStack-Provider-Data": json.dumps(provider_data),
     }
 
-    try:
-        llama_stack_client.toolgroups.unregister(toolgroup_id=test_toolgroup_id, extra_headers=auth_headers)
-    except Exception as e:
-        # An error is OK since the toolgroup may not exist
-        print(f"Error unregistering toolgroup: {e}")
+    with pytest.raises(Exception, match="Unauthorized"):
+        llama_stack_client.tools.list()
 
-    llama_stack_client.toolgroups.register(
-        toolgroup_id=test_toolgroup_id,
-        provider_id="model-context-protocol",
-        mcp_endpoint=dict(uri=uri),
-        extra_headers=auth_headers,
-    )
     response = llama_stack_client.tools.list(
         toolgroup_id=test_toolgroup_id,
         extra_headers=auth_headers,
@@ -79,14 +68,10 @@ def test_mcp_invocation(llama_stack_client, mcp_server):
     assert content[0].type == "text"
     assert content[0].text == "Hello, world!"
 
-    models = [
-        m for m in llama_stack_client.models.list() if m.model_type == ModelType.llm and "guard" not in m.identifier
-    ]
-    model_id = models[0].identifier
-    print(f"Using model: {model_id}")
+    print(f"Using model: {text_model_id}")
     agent = Agent(
         client=llama_stack_client,
-        model=model_id,
+        model=text_model_id,
         instructions="You are a helpful assistant.",
         tools=[test_toolgroup_id],
     )

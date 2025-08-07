@@ -7,7 +7,7 @@
 import logging
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from llama_stack.apis.agents import (
     Agent,
@@ -29,6 +29,7 @@ from llama_stack.apis.agents import (
     Session,
     Turn,
 )
+from llama_stack.apis.agents.openai_responses import OpenAIResponseText
 from llama_stack.apis.common.responses import PaginatedResponse
 from llama_stack.apis.inference import (
     Inference,
@@ -40,6 +41,7 @@ from llama_stack.apis.inference import (
 from llama_stack.apis.safety import Safety
 from llama_stack.apis.tools import ToolGroups, ToolRuntime
 from llama_stack.apis.vector_io import VectorIO
+from llama_stack.core.datatypes import AccessRule
 from llama_stack.providers.utils.kvstore import InmemoryKVStoreImpl, kvstore_impl
 from llama_stack.providers.utils.pagination import paginate_records
 from llama_stack.providers.utils.responses.responses_store import ResponsesStore
@@ -61,6 +63,7 @@ class MetaReferenceAgentsImpl(Agents):
         safety_api: Safety,
         tool_runtime_api: ToolRuntime,
         tool_groups_api: ToolGroups,
+        policy: list[AccessRule],
     ):
         self.config = config
         self.inference_api = inference_api
@@ -71,16 +74,18 @@ class MetaReferenceAgentsImpl(Agents):
 
         self.in_memory_store = InmemoryKVStoreImpl()
         self.openai_responses_impl: OpenAIResponsesImpl | None = None
+        self.policy = policy
 
     async def initialize(self) -> None:
         self.persistence_store = await kvstore_impl(self.config.persistence_store)
-        self.responses_store = ResponsesStore(self.config.responses_store)
+        self.responses_store = ResponsesStore(self.config.responses_store, self.policy)
         await self.responses_store.initialize()
         self.openai_responses_impl = OpenAIResponsesImpl(
             inference_api=self.inference_api,
             tool_groups_api=self.tool_groups_api,
             tool_runtime_api=self.tool_runtime_api,
             responses_store=self.responses_store,
+            vector_io_api=self.vector_io_api,
         )
 
     async def create_agent(
@@ -88,7 +93,7 @@ class MetaReferenceAgentsImpl(Agents):
         agent_config: AgentConfig,
     ) -> AgentCreateResponse:
         agent_id = str(uuid.uuid4())
-        created_at = datetime.now(timezone.utc)
+        created_at = datetime.now(UTC)
 
         agent_info = AgentInfo(
             **agent_config.model_dump(),
@@ -129,6 +134,7 @@ class MetaReferenceAgentsImpl(Agents):
                 self.persistence_store if agent_info.enable_session_persistence else self.in_memory_store
             ),
             created_at=agent_info.created_at,
+            policy=self.policy,
         )
 
     async def create_agent_session(
@@ -224,8 +230,6 @@ class MetaReferenceAgentsImpl(Agents):
         agent = await self._get_agent_impl(agent_id)
 
         session_info = await agent.storage.get_session_info(session_id)
-        if session_info is None:
-            raise ValueError(f"Session {session_id} not found")
         turns = await agent.storage.get_session_turns(session_id)
         if turn_ids:
             turns = [turn for turn in turns if turn.turn_id in turn_ids]
@@ -238,9 +242,6 @@ class MetaReferenceAgentsImpl(Agents):
 
     async def delete_agents_session(self, agent_id: str, session_id: str) -> None:
         agent = await self._get_agent_impl(agent_id)
-        session_info = await agent.storage.get_session_info(session_id)
-        if session_info is None:
-            raise ValueError(f"Session {session_id} not found")
 
         # Delete turns first, then the session
         await agent.storage.delete_session_turns(session_id)
@@ -324,10 +325,12 @@ class MetaReferenceAgentsImpl(Agents):
         store: bool | None = True,
         stream: bool | None = False,
         temperature: float | None = None,
+        text: OpenAIResponseText | None = None,
         tools: list[OpenAIResponseInputTool] | None = None,
+        max_infer_iters: int | None = 10,
     ) -> OpenAIResponseObject:
         return await self.openai_responses_impl.create_openai_response(
-            input, model, instructions, previous_response_id, store, stream, temperature, tools
+            input, model, instructions, previous_response_id, store, stream, temperature, text, tools, max_infer_iters
         )
 
     async def list_openai_responses(
@@ -351,3 +354,6 @@ class MetaReferenceAgentsImpl(Agents):
         return await self.openai_responses_impl.list_openai_response_input_items(
             response_id, after, before, include, limit, order
         )
+
+    async def delete_openai_response(self, response_id: str) -> None:
+        return await self.openai_responses_impl.delete_openai_response(response_id)

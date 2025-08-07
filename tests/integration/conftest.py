@@ -9,11 +9,14 @@ import os
 import platform
 import textwrap
 import time
+import warnings
 
 import pytest
 from dotenv import load_dotenv
 
 from llama_stack.log import get_logger
+
+from .fixtures.common import instantiate_llama_stack_client
 
 logger = get_logger(__name__, category="tests")
 
@@ -25,6 +28,25 @@ def pytest_runtest_makereport(item, call):
     if report.when == "call":
         item.execution_outcome = report.outcome
         item.was_xfail = getattr(report, "wasxfail", False)
+
+
+def pytest_sessionstart(session):
+    # stop macOS from complaining about duplicate OpenMP libraries
+    os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+    # pull client instantiation to session start so all the complex logs during initialization
+    # don't clobber the test one-liner outputs
+    print("instantiating llama_stack_client")
+    start_time = time.time()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+        try:
+            session._llama_stack_client = instantiate_llama_stack_client(session)
+        except Exception as e:
+            logger.error(f"Error instantiating llama_stack_client: {e}")
+            session._llama_stack_client = None
+    print(f"llama_stack_client instantiated in {time.time() - start_time:.3f}s")
 
 
 def pytest_runtest_teardown(item):
@@ -65,7 +87,7 @@ def pytest_addoption(parser):
         help=textwrap.dedent(
             """
             a 'pointer' to the stack. this can be either be:
-            (a) a template name like `fireworks`, or
+            (a) a template name like `starter`, or
             (b) a path to a run.yaml file, or
             (c) an adhoc config spec, e.g. `inference=fireworks,safety=llama-guard,agents=meta-reference`
             """
@@ -95,6 +117,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--embedding-dimension",
         type=int,
+        default=384,
         help="Output dimensionality of the embedding model to use for testing. Default: 384",
     )
     parser.addoption(

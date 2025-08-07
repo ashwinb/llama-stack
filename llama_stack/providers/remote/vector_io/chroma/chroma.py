@@ -12,11 +12,19 @@ from urllib.parse import urlparse
 import chromadb
 from numpy.typing import NDArray
 
+from llama_stack.apis.files import Files
 from llama_stack.apis.inference import InterleavedContent
 from llama_stack.apis.vector_dbs import VectorDB
-from llama_stack.apis.vector_io import Chunk, QueryChunksResponse, VectorIO
+from llama_stack.apis.vector_io import (
+    Chunk,
+    QueryChunksResponse,
+    VectorIO,
+)
 from llama_stack.providers.datatypes import Api, VectorDBsProtocolPrivate
 from llama_stack.providers.inline.vector_io.chroma import ChromaVectorIOConfig as InlineChromaVectorIOConfig
+from llama_stack.providers.utils.kvstore import kvstore_impl
+from llama_stack.providers.utils.kvstore.api import KVStore
+from llama_stack.providers.utils.memory.openai_vector_store_mixin import OpenAIVectorStoreMixin
 from llama_stack.providers.utils.memory.vector_store import (
     EmbeddingIndex,
     VectorDBWithIndex,
@@ -28,6 +36,13 @@ log = logging.getLogger(__name__)
 
 ChromaClientType = chromadb.api.AsyncClientAPI | chromadb.api.ClientAPI
 
+VERSION = "v3"
+VECTOR_DBS_PREFIX = f"vector_dbs:chroma:{VERSION}::"
+VECTOR_INDEX_PREFIX = f"vector_index:chroma:{VERSION}::"
+OPENAI_VECTOR_STORES_PREFIX = f"openai_vector_stores:chroma:{VERSION}::"
+OPENAI_VECTOR_STORES_FILES_PREFIX = f"openai_vector_stores_files:chroma:{VERSION}::"
+OPENAI_VECTOR_STORES_FILES_CONTENTS_PREFIX = f"openai_vector_stores_files_contents:chroma:{VERSION}::"
+
 
 # this is a helper to allow us to use async and non-async chroma clients interchangeably
 async def maybe_await(result):
@@ -37,16 +52,20 @@ async def maybe_await(result):
 
 
 class ChromaIndex(EmbeddingIndex):
-    def __init__(self, client: ChromaClientType, collection):
+    def __init__(self, client: ChromaClientType, collection, kvstore: KVStore | None = None):
         self.client = client
         self.collection = collection
+        self.kvstore = kvstore
+
+    async def initialize(self):
+        pass
 
     async def add_chunks(self, chunks: list[Chunk], embeddings: NDArray):
         assert len(chunks) == len(embeddings), (
             f"Chunk length {len(chunks)} does not match embedding length {len(embeddings)}"
         )
 
-        ids = [f"{c.metadata['document_id']}:chunk-{i}" for i, c in enumerate(chunks)]
+        ids = [f"{c.metadata.get('document_id', '')}:{c.chunk_id}" for c in chunks]
         await maybe_await(
             self.collection.add(
                 documents=[chunk.model_dump_json() for chunk in chunks],
@@ -55,7 +74,7 @@ class ChromaIndex(EmbeddingIndex):
             )
         )
 
-    async def query(self, embedding: NDArray, k: int, score_threshold: float) -> QueryChunksResponse:
+    async def query_vector(self, embedding: NDArray, k: int, score_threshold: float) -> QueryChunksResponse:
         results = await maybe_await(
             self.collection.query(
                 query_embeddings=[embedding.tolist()],
@@ -76,8 +95,12 @@ class ChromaIndex(EmbeddingIndex):
                 log.exception(f"Failed to parse document: {doc}")
                 continue
 
+            score = 1.0 / float(dist) if dist != 0 else float("inf")
+            if score < score_threshold:
+                continue
+
             chunks.append(chunk)
-            scores.append(1.0 / float(dist))
+            scores.append(score)
 
         return QueryChunksResponse(chunks=chunks, scores=scores)
 
@@ -92,21 +115,40 @@ class ChromaIndex(EmbeddingIndex):
     ) -> QueryChunksResponse:
         raise NotImplementedError("Keyword search is not supported in Chroma")
 
+    async def delete_chunk(self, chunk_id: str) -> None:
+        raise NotImplementedError("delete_chunk is not supported in Chroma")
 
-class ChromaVectorIOAdapter(VectorIO, VectorDBsProtocolPrivate):
+    async def query_hybrid(
+        self,
+        embedding: NDArray,
+        query_string: str,
+        k: int,
+        score_threshold: float,
+        reranker_type: str,
+        reranker_params: dict[str, Any] | None = None,
+    ) -> QueryChunksResponse:
+        raise NotImplementedError("Hybrid search is not supported in Chroma")
+
+
+class ChromaVectorIOAdapter(OpenAIVectorStoreMixin, VectorIO, VectorDBsProtocolPrivate):
     def __init__(
         self,
         config: RemoteChromaVectorIOConfig | InlineChromaVectorIOConfig,
         inference_api: Api.inference,
+        files_api: Files | None,
     ) -> None:
         log.info(f"Initializing ChromaVectorIOAdapter with url: {config}")
         self.config = config
         self.inference_api = inference_api
-
         self.client = None
         self.cache = {}
+        self.kvstore: KVStore | None = None
+        self.vector_db_store = None
 
     async def initialize(self) -> None:
+        self.kvstore = await kvstore_impl(self.config.kvstore)
+        self.vector_db_store = self.kvstore
+
         if isinstance(self.config, RemoteChromaVectorIOConfig):
             log.info(f"Connecting to Chroma server at: {self.config.url}")
             url = self.config.url.rstrip("/")
@@ -119,6 +161,7 @@ class ChromaVectorIOAdapter(VectorIO, VectorDBsProtocolPrivate):
         else:
             log.info(f"Connecting to Chroma local db at: {self.config.db_path}")
             self.client = chromadb.PersistentClient(path=self.config.db_path)
+        self.openai_vector_stores = await self._load_openai_vector_stores()
 
     async def shutdown(self) -> None:
         pass
@@ -138,6 +181,10 @@ class ChromaVectorIOAdapter(VectorIO, VectorDBsProtocolPrivate):
         )
 
     async def unregister_vector_db(self, vector_db_id: str) -> None:
+        if vector_db_id not in self.cache:
+            log.warning(f"Vector DB {vector_db_id} not found")
+            return
+
         await self.cache[vector_db_id].index.delete()
         del self.cache[vector_db_id]
 
@@ -148,6 +195,8 @@ class ChromaVectorIOAdapter(VectorIO, VectorDBsProtocolPrivate):
         ttl_seconds: int | None = None,
     ) -> None:
         index = await self._get_and_cache_vector_db_index(vector_db_id)
+        if index is None:
+            raise ValueError(f"Vector DB {vector_db_id} not found in Chroma")
 
         await index.insert_chunks(chunks)
 
@@ -158,6 +207,9 @@ class ChromaVectorIOAdapter(VectorIO, VectorDBsProtocolPrivate):
         params: dict[str, Any] | None = None,
     ) -> QueryChunksResponse:
         index = await self._get_and_cache_vector_db_index(vector_db_id)
+
+        if index is None:
+            raise ValueError(f"Vector DB {vector_db_id} not found in Chroma")
 
         return await index.query_chunks(query, params)
 
@@ -174,3 +226,6 @@ class ChromaVectorIOAdapter(VectorIO, VectorDBsProtocolPrivate):
         index = VectorDBWithIndex(vector_db, ChromaIndex(self.client, collection), self.inference_api)
         self.cache[vector_db_id] = index
         return index
+
+    async def delete_chunks(self, store_id: str, chunk_ids: list[str]) -> None:
+        raise NotImplementedError("OpenAI Vector Stores API is not supported in Chroma")

@@ -18,9 +18,16 @@ from llama_stack.apis.inference import (
     CompletionRequest,
     EmbeddingsResponse,
     EmbeddingTaskType,
+    GreedySamplingStrategy,
     Inference,
     LogProbConfig,
     Message,
+    OpenAIChatCompletion,
+    OpenAIChatCompletionChunk,
+    OpenAICompletion,
+    OpenAIEmbeddingsResponse,
+    OpenAIMessageParam,
+    OpenAIResponseFormatParam,
     ResponseFormat,
     SamplingParams,
     TextTruncation,
@@ -28,14 +35,6 @@ from llama_stack.apis.inference import (
     ToolConfig,
     ToolDefinition,
     ToolPromptFormat,
-)
-from llama_stack.apis.inference.inference import (
-    GreedySamplingStrategy,
-    OpenAIChatCompletion,
-    OpenAIChatCompletionChunk,
-    OpenAICompletion,
-    OpenAIMessageParam,
-    OpenAIResponseFormatParam,
     TopKSamplingStrategy,
     TopPSamplingStrategy,
 )
@@ -260,6 +259,16 @@ class WatsonXInferenceAdapter(Inference, ModelRegistryHelper):
     ) -> EmbeddingsResponse:
         raise NotImplementedError("embedding is not supported for watsonx")
 
+    async def openai_embeddings(
+        self,
+        model: str,
+        input: str | list[str],
+        encoding_format: str | None = "float",
+        dimensions: int | None = None,
+        user: str | None = None,
+    ) -> OpenAIEmbeddingsResponse:
+        raise NotImplementedError()
+
     async def openai_completion(
         self,
         model: str,
@@ -281,6 +290,7 @@ class WatsonXInferenceAdapter(Inference, ModelRegistryHelper):
         user: str | None = None,
         guided_choice: list[str] | None = None,
         prompt_logprobs: int | None = None,
+        suffix: str | None = None,
     ) -> OpenAICompletion:
         model_obj = await self.model_store.get_model(model)
         params = await prepare_openai_completion_params(
