@@ -16,7 +16,7 @@ from typing import (
 )
 
 from openai import AsyncStream
-from openai.types import (
+from openai.types.chat import (
     ChatCompletionAssistantMessageParam as OpenAIChatCompletionAssistantMessage,
     ChatCompletionChunk as OpenAIChatCompletionChunk,
     ChatCompletionContentPartImageParam as OpenAIChatCompletionContentPartImageParam,
@@ -28,13 +28,21 @@ from openai.types import (
     ChatCompletionSystemMessageParam as OpenAIChatCompletionSystemMessage,
     ChatCompletionToolMessageParam as OpenAIChatCompletionToolMessage,
     ChatCompletionUserMessageParam as OpenAIChatCompletionUserMessage,
+)
+from openai.types.chat.chat_completion import (
     Choice as OpenAIChoice,
-    Choice as OpenAIChatCompletionChunkChoice,
     ChoiceLogprobs as OpenAIChoiceLogprobs,
+)
+from openai.types.chat.chat_completion_chunk import (
+    Choice as OpenAIChatCompletionChunkChoice,
     ChoiceDelta as OpenAIChoiceDelta,
     ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
     ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
+)
+from openai.types.chat.chat_completion_content_part_image_param import (
     ImageURL as OpenAIImageURL,
+)
+from openai.types.chat.chat_completion_message_tool_call_param import (
     Function as OpenAIFunction,
 )
 

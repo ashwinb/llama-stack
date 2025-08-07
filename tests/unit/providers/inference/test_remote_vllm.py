@@ -14,13 +14,13 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from openai.types import (
-    ChatCompletionChunk as OpenAIChatCompletionChunk,
+from openai.types import Model as OpenAIModel
+from openai.types.chat import ChatCompletionChunk as OpenAIChatCompletionChunk
+from openai.types.chat.chat_completion_chunk import (
     Choice as OpenAIChoice,
     ChoiceDelta as OpenAIChoiceDelta,
     ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
     ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
-    Model as OpenAIModel,
 )
 
 from llama_stack.apis.inference import (

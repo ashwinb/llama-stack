@@ -10,7 +10,7 @@ from collections.abc import AsyncGenerator, AsyncIterator
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from openai.types import (
+from openai.types.chat import (
     ChatCompletionToolChoiceOptionParam as OpenAIChatCompletionToolChoiceOptionParam,
     ChatCompletionToolParam as OpenAIChatCompletionToolParam,
 )

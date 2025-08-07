@@ -11,7 +11,7 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
-from openai.types import ChatCompletionToolParam
+from openai.types.chat import ChatCompletionToolParam
 from pydantic import BaseModel
 
 
