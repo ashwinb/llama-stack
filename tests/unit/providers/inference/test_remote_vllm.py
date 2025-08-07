@@ -14,26 +14,14 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-# Try importing from openai.types first
-try:
-    from openai.types import (
-        ChatCompletionChunk as OpenAIChatCompletionChunk,
-        Choice as OpenAIChoice,
-        ChoiceDelta as OpenAIChoiceDelta,
-        ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
-        ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
-        Model as OpenAIModel,
-    )
-except ImportError:
-    # Fall back to specific imports
-    from openai.types.chat.chat_completion_chunk import (
-        ChatCompletionChunk as OpenAIChatCompletionChunk,
-        Choice as OpenAIChoice,
-        ChoiceDelta as OpenAIChoiceDelta,
-        ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
-        ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
-    )
-    from openai.types.model import Model as OpenAIModel
+from openai.types import (
+    ChatCompletionChunk as OpenAIChatCompletionChunk,
+    Choice as OpenAIChoice,
+    ChoiceDelta as OpenAIChoiceDelta,
+    ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
+    ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
+    Model as OpenAIModel,
+)
 
 from llama_stack.apis.inference import (
     ChatCompletionRequest,

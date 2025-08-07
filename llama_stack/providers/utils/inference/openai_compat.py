@@ -28,37 +28,15 @@ from openai.types import (
     ChatCompletionSystemMessageParam as OpenAIChatCompletionSystemMessage,
     ChatCompletionToolMessageParam as OpenAIChatCompletionToolMessage,
     ChatCompletionUserMessageParam as OpenAIChatCompletionUserMessage,
+    Choice as OpenAIChoice,
+    Choice as OpenAIChatCompletionChunkChoice,
+    ChoiceLogprobs as OpenAIChoiceLogprobs,
+    ChoiceDelta as OpenAIChoiceDelta,
+    ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
+    ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
+    ImageURL as OpenAIImageURL,
+    Function as OpenAIFunction,
 )
-# Try to get the remaining types from openai.types as well
-try:
-    from openai.types import (
-        Choice as OpenAIChoice,
-        ChoiceLogprobs as OpenAIChoiceLogprobs,
-        ChoiceDelta as OpenAIChoiceDelta,
-        ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
-        ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
-        ImageURL as OpenAIImageURL,
-        Function as OpenAIFunction,
-    )
-    from openai.types import Choice as OpenAIChatCompletionChunkChoice
-except ImportError:
-    # Fall back to specific imports if not available in openai.types
-    from openai.types.chat.chat_completion import (
-        Choice as OpenAIChoice,
-        ChoiceLogprobs as OpenAIChoiceLogprobs,
-    )
-    from openai.types.chat.chat_completion_chunk import (
-        Choice as OpenAIChatCompletionChunkChoice,
-        ChoiceDelta as OpenAIChoiceDelta,
-        ChoiceDeltaToolCall as OpenAIChoiceDeltaToolCall,
-        ChoiceDeltaToolCallFunction as OpenAIChoiceDeltaToolCallFunction,
-    )
-    from openai.types.chat.chat_completion_content_part_image_param import (
-        ImageURL as OpenAIImageURL,
-    )
-    from openai.types.chat.chat_completion_message_tool_call_param import (
-        Function as OpenAIFunction,
-    )
 
 from pydantic import BaseModel
 
