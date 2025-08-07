@@ -10,8 +10,12 @@ from typing import Any
 
 from openai import AsyncStream
 
-# NOTE: Avoid deep imports from openai.types.* to remain compatible across SDK versions.
-# We only need structural access (attributes) and not the concrete classes.
+# Keep concrete types but avoid overly deep paths
+from openai.types.completion import Completion as OpenAICompletion
+from openai.types.completion_choice import (
+    CompletionChoice as OpenAICompletionChoice,
+    Logprobs as OpenAICompletionLogprobs,
+)
 
 from llama_stack.apis.inference import (
     ChatCompletionRequest,
@@ -175,7 +179,7 @@ def convert_completion_request(
 
 
 def _convert_openai_completion_logprobs(
-    logprobs: Any | None,
+    logprobs: OpenAICompletionLogprobs | None,
 ) -> list[TokenLogProbs] | None:
     """
     Convert an OpenAI CompletionLogprobs into a list of TokenLogProbs.
@@ -187,7 +191,7 @@ def _convert_openai_completion_logprobs(
 
 
 def convert_openai_completion_choice(
-    choice: Any,
+    choice: OpenAICompletionChoice,
 ) -> CompletionResponse:
     """
     Convert an OpenAI Completion Choice into a CompletionResponse.
@@ -200,7 +204,7 @@ def convert_openai_completion_choice(
 
 
 async def convert_openai_completion_stream(
-    stream: AsyncStream[Any],
+    stream: AsyncStream[OpenAICompletion],
 ) -> AsyncGenerator[CompletionResponse, None]:
     """
     Convert a stream of OpenAI Completions into a stream
