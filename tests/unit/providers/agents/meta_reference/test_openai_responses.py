@@ -7,8 +7,10 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from openai.types.chat.chat_completion_chunk import (
+from openai.types.chat import (
     ChatCompletionChunk,
+)
+from openai.types.chat.chat_completion_chunk import (
     Choice,
     ChoiceDelta,
     ChoiceDeltaToolCall,
