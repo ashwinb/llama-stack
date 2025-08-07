@@ -11,7 +11,7 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
-from openai.types.chat import ChatCompletionToolParam
+from openai.types.chat import ChatCompletionFunctionToolParam
 from pydantic import BaseModel
 
 
@@ -207,7 +207,7 @@ class ChatCompletionContext(BaseModel):
     model: str
     messages: list[OpenAIMessageParam]
     response_tools: list[OpenAIResponseInputTool] | None = None
-    chat_tools: list[ChatCompletionToolParam] | None = None
+    chat_tools: list[ChatCompletionFunctionToolParam] | None = None
     mcp_tool_to_server: dict[str, OpenAIResponseInputToolMCP]
     temperature: float | None
     response_format: OpenAIResponseFormatParam
@@ -582,7 +582,7 @@ class OpenAIResponsesImpl:
     async def _convert_response_tools_to_chat_tools(
         self, tools: list[OpenAIResponseInputTool]
     ) -> tuple[
-        list[ChatCompletionToolParam],
+        list[ChatCompletionFunctionToolParam],
         dict[str, OpenAIResponseInputToolMCP],
         OpenAIResponseOutput | None,
     ]:
@@ -593,7 +593,7 @@ class OpenAIResponsesImpl:
 
         mcp_tool_to_server = {}
 
-        def make_openai_tool(tool_name: str, tool: Tool) -> ChatCompletionToolParam:
+        def make_openai_tool(tool_name: str, tool: Tool) -> ChatCompletionFunctionToolParam:
             tool_def = ToolDefinition(
                 tool_name=tool_name,
                 description=tool.description,
@@ -610,11 +610,11 @@ class OpenAIResponsesImpl:
             return convert_tooldef_to_openai_tool(tool_def)
 
         mcp_list_message = None
-        chat_tools: list[ChatCompletionToolParam] = []
+        chat_tools: list[ChatCompletionFunctionToolParam] = []
         for input_tool in tools:
             # TODO: Handle other tool types
             if input_tool.type == "function":
-                chat_tools.append(ChatCompletionToolParam(type="function", function=input_tool.model_dump()))
+                chat_tools.append(ChatCompletionFunctionToolParam(type="function", function=input_tool.model_dump()))
             elif input_tool.type in WebSearchToolTypes:
                 tool_name = "web_search"
                 tool = await self.tool_groups_api.get_tool(tool_name)
