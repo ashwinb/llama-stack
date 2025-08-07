@@ -9,10 +9,14 @@ from typing import Any
 
 import httpx
 from openai import APIConnectionError, AsyncOpenAI
-import openai.types.chat.chat_completion_chunk as openai_chunk
-
-# Type aliases using the imported module
-OpenAIChatCompletionChunk = openai_chunk.ChatCompletionChunk
+# Try importing from openai.types first
+try:
+    from openai.types import ChatCompletionChunk as OpenAIChatCompletionChunk
+except ImportError:
+    # Fall back to specific imports
+    from openai.types.chat.chat_completion_chunk import (
+        ChatCompletionChunk as OpenAIChatCompletionChunk,
+    )
 
 from llama_stack.apis.common.content_types import (
     InterleavedContent,

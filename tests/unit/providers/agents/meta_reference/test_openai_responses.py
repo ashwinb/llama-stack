@@ -7,14 +7,24 @@
 from unittest.mock import AsyncMock
 
 import pytest
-import openai.types.chat.chat_completion_chunk as openai_chunk
-
-# Type aliases using the imported module
-ChatCompletionChunk = openai_chunk.ChatCompletionChunk
-Choice = openai_chunk.Choice
-ChoiceDelta = openai_chunk.ChoiceDelta
-ChoiceDeltaToolCall = openai_chunk.ChoiceDeltaToolCall
-ChoiceDeltaToolCallFunction = openai_chunk.ChoiceDeltaToolCallFunction
+# Try importing from openai.types first
+try:
+    from openai.types import (
+        ChatCompletionChunk,
+        Choice,
+        ChoiceDelta,
+        ChoiceDeltaToolCall,
+        ChoiceDeltaToolCallFunction,
+    )
+except ImportError:
+    # Fall back to specific imports
+    from openai.types.chat.chat_completion_chunk import (
+        ChatCompletionChunk,
+        Choice,
+        ChoiceDelta,
+        ChoiceDeltaToolCall,
+        ChoiceDeltaToolCallFunction,
+    )
 
 from llama_stack.apis.agents import Order
 from llama_stack.apis.agents.openai_responses import (

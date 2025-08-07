@@ -10,12 +10,13 @@ from collections.abc import AsyncGenerator, AsyncIterator
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-import openai.types.chat as openai_chat
+from openai.types import (
+    ChatCompletionToolChoiceOptionParam as OpenAIChatCompletionToolChoiceOptionParam,
+    ChatCompletionToolParam as OpenAIChatCompletionToolParam,
+)
 from pydantic import Field, TypeAdapter
 
-# Type aliases using the imported module
-OpenAIChatCompletionToolChoiceOptionParam = openai_chat.ChatCompletionToolChoiceOptionParam
-OpenAIChatCompletionToolParam = openai_chat.ChatCompletionToolParam
+
 
 from llama_stack.apis.common.content_types import (
     InterleavedContent,

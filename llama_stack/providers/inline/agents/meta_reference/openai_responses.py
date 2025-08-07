@@ -11,11 +11,10 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
-import openai.types.chat as openai_chat
+from openai.types import ChatCompletionToolParam
 from pydantic import BaseModel
 
-# Type aliases using the imported module
-ChatCompletionToolParam = openai_chat.ChatCompletionToolParam
+
 
 from llama_stack.apis.agents import Order
 from llama_stack.apis.agents.openai_responses import (
