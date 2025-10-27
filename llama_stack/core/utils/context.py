@@ -21,20 +21,28 @@ def preserve_contexts_async_generator[T](
 
     async def wrapper() -> AsyncGenerator[T, None]:
         while True:
+            # Restore context values before any await and keep tokens
+            tokens = [
+                context_var.set(initial_context_values[context_var.name])
+                for context_var in context_vars
+            ]
+
             try:
-                # Restore context values before any await
-                for context_var in context_vars:
-                    context_var.set(initial_context_values[context_var.name])
-
                 item = await gen.__anext__()
+            except StopAsyncIteration:
+                # Ensure we reset the context vars before exiting
+                for context_var, token in zip(context_vars, tokens):
+                    context_var.reset(token)
+                break
 
+            try:
+                yield item
                 # Update our tracked values with any changes made during this iteration
                 for context_var in context_vars:
                     initial_context_values[context_var.name] = context_var.get()
-
-                yield item
-
-            except StopAsyncIteration:
-                break
+            finally:
+                # Clear out the context for the next request
+                for context_var, token in zip(context_vars, tokens):
+                    context_var.reset(token)
 
     return wrapper()
