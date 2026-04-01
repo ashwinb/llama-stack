@@ -62,7 +62,7 @@ class BuiltinCodeScannerSafetyImpl(Safety):
 
         from codeshield.cs import CodeShield  # ty: ignore[unresolved-import]
 
-        text = "\n".join([interleaved_content_as_str(m.content) for m in request.messages])
+        text = "\n".join([interleaved_content_as_str(m.content) for m in request.messages])  # ty: ignore[invalid-argument-type]  # OpenAI content types handled at runtime
         log.info(f"Running CodeScannerShield on {text[50:]}")
         result = await CodeShield.scan_code(text)
 
