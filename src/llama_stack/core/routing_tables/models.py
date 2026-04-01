@@ -8,6 +8,7 @@ import time
 from typing import Any
 
 from llama_stack.core.access_control.access_control import is_action_allowed
+from llama_stack.core.access_control.datatypes import Action
 from llama_stack.core.datatypes import (
     ModelWithOwner,
     RegistryEntrySource,
@@ -40,13 +41,13 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
 
     async def refresh(self) -> None:
         for provider_id, provider in self.impls_by_provider_id.items():
-            refresh = await provider.should_refresh_models()
+            refresh = await provider.should_refresh_models()  # ty: ignore[unresolved-attribute]
             refresh = refresh or provider_id not in self.listed_providers
             if not refresh:
                 continue
 
             try:
-                models = await provider.list_models()
+                models = await provider.list_models()  # ty: ignore[unresolved-attribute]
             except Exception as e:
                 if provider_id not in self.listed_providers:
                     self.listed_providers.add(provider_id)
@@ -100,7 +101,7 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
             # Validation succeeded! User has credentials for this provider
             # Now try to list models
             try:
-                models = await provider.list_models()
+                models = await provider.list_models()  # ty: ignore[unresolved-attribute]
                 if not models:
                     continue
 
@@ -120,7 +121,7 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
                     )
 
                     # Apply RBAC check - only include models user has read permission for
-                    if is_action_allowed(self.policy, "read", temp_model, user):
+                    if is_action_allowed(self.policy, Action.READ, temp_model, user):  # ty: ignore[invalid-argument-type]
                         dynamic_models.append(model)
                     else:
                         logger.debug(
@@ -154,7 +155,7 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
         registry_identifiers = {m.identifier for m in registry_models}
         unique_dynamic_models = [m for m in dynamic_models if m.identifier not in registry_identifiers]
 
-        return ListModelsResponse(data=registry_models + unique_dynamic_models)
+        return ListModelsResponse(data=registry_models + unique_dynamic_models)  # ty: ignore[invalid-argument-type]
 
     async def openai_list_models(self) -> OpenAIListModelsResponse:
         # Get models from registry
@@ -176,17 +177,17 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
                 created=int(time.time()),
                 owned_by="llama_stack",
                 custom_metadata={
-                    "model_type": model.model_type,
+                    "model_type": model.model_type,  # ty: ignore[unresolved-attribute]
                     "provider_id": model.provider_id,
                     "provider_resource_id": model.provider_resource_id,
-                    **model.metadata,
+                    **model.metadata,  # ty: ignore[unresolved-attribute]
                 },
             )
             for model in all_models
         ]
         return OpenAIListModelsResponse(data=openai_models)
 
-    async def get_model(self, request_or_model_id: GetModelRequest | str) -> Model:
+    async def get_model(self, request_or_model_id: GetModelRequest | str) -> Model:  # ty: ignore[invalid-method-override]
         # Support both the public Models API (GetModelRequest) and internal ModelStore interface (string)
         if isinstance(request_or_model_id, GetModelRequest):
             model_id = request_or_model_id.model_id
@@ -194,7 +195,7 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
             model_id = request_or_model_id
         return await lookup_model(self, model_id)
 
-    async def get_provider_impl(self, model_id: str) -> Any:
+    async def get_provider_impl(self, model_id: str) -> Any:  # ty: ignore[invalid-method-override]
         model = await lookup_model(self, model_id)
         if model.provider_id not in self.impls_by_provider_id:
             raise ValueError(f"Provider {model.provider_id} not found in the routing table")
@@ -266,7 +267,7 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
             source=RegistryEntrySource.via_register_api,
         )
         registered_model = await self.register_object(model)
-        return registered_model
+        return registered_model  # ty: ignore[invalid-return-type]
 
     async def unregister_model(
         self,
@@ -287,7 +288,7 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
         existing_model = await self.get_model(model_id)
         if existing_model is None:
             raise ModelNotFoundError(model_id)
-        await self.unregister_object(existing_model)
+        await self.unregister_object(existing_model)  # ty: ignore[invalid-argument-type]
 
     async def update_registered_models(
         self,
