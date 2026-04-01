@@ -116,7 +116,9 @@ class CommonRoutingTableImpl(RoutingTable):
         self.policy = policy
 
     async def initialize(self) -> None:
-        async def add_objects(objs: list[RoutableObjectWithProvider], provider_id: str, cls: type[RoutableObjectWithProvider] | None) -> None:
+        async def add_objects(
+            objs: list[RoutableObjectWithProvider], provider_id: str, cls: type[RoutableObjectWithProvider] | None
+        ) -> None:
             for obj in objs:
                 if cls is None:
                     obj.provider_id = provider_id
