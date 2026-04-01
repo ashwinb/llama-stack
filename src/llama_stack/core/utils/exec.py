@@ -40,7 +40,7 @@ def formulate_run_args(image_type: str, distro_name: str) -> list:
 
     cprint(f"Using virtual environment: {env_name}", file=sys.stderr)
 
-    script = importlib.resources.files("llama_stack") / "core/start_stack.sh"
+    script = importlib.resources.files("llama_stack") / "core/start_stack.sh"  # ty: ignore[possibly-missing-submodule] - importlib.resources is imported at module level
     run_args = [
         script,
         image_type,
