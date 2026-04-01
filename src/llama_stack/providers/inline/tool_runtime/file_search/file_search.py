@@ -65,7 +65,7 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             else:
                 file_data = str(data).encode("utf-8")
 
-            return file_data, mime_type
+            return file_data, mime_type  # ty:ignore[invalid-return-type]
         else:
             async with httpx.AsyncClient() as client:
                 r = await client.get(uri)
@@ -90,7 +90,7 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             else:
                 file_data = str(data).encode("utf-8")
 
-            return file_data, mime_type
+            return file_data, mime_type  # ty:ignore[invalid-return-type]
         else:
             return content_str.encode("utf-8"), "text/plain"
 
@@ -239,7 +239,7 @@ class FileSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime):
             return RAGQueryResult(content=None)
 
         # sort by score
-        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)  # type: ignore
+        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)
         chunks = chunks[: query_config.max_chunks]
 
         tokens = 0

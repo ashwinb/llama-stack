@@ -75,9 +75,9 @@ async def llm_rag_query_generator(
 
     messages = []
     if isinstance(content, list):
-        messages = [interleaved_content_as_str(m) for m in content]  # ty: ignore[invalid-argument-type]
+        messages = [interleaved_content_as_str(m) for m in content]
     else:
-        messages = [interleaved_content_as_str(content)]  # ty: ignore[invalid-argument-type]
+        messages = [interleaved_content_as_str(content)]
 
     template = Template(config.template)
     rendered_content: str = template.render({"messages": messages})
@@ -91,6 +91,6 @@ async def llm_rag_query_generator(
     )
     response = await inference_api.openai_chat_completion(params)
 
-    query = response.choices[0].message.content  # ty: ignore[unresolved-attribute]
+    query = response.choices[0].message.content
 
     return query
