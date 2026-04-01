@@ -75,9 +75,10 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
     # Allow arbitrary types for shared_ssl_context
     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
 
-    # Runtime-injected by routing tables; declared here for type-checking
-    __provider_id__: str
-    model_store: Any  # Injected at runtime by distribution system
+    # Runtime-injected by routing tables; declared here for type-checking.
+    # Defaults are needed because constructors don't pass these — they are set post-init.
+    __provider_id__: str = ""
+    model_store: Any = None  # Injected at runtime by distribution system
 
     config: RemoteInferenceProviderConfig
 

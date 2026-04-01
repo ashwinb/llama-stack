@@ -152,13 +152,13 @@ class OCIInferenceAdapter(OpenAIMixin):
         """
         if identifier in self.embedding_models:
             return Model(
-                provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # injected at runtime
+                provider_id=self.__provider_id__,  # injected at runtime
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
             )
         return Model(
-            provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # injected at runtime
+            provider_id=self.__provider_id__,  # injected at runtime
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=ModelType.llm,
