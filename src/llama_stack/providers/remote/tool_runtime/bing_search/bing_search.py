@@ -30,7 +30,7 @@ class BingSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsReq
         self.config = config
         self.url = "https://api.bing.microsoft.com/v7.0/search"
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         pass
 
     async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
@@ -99,7 +99,7 @@ class BingSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsReq
 
         return ToolInvocationResult(content=json.dumps(self._clean_response(response.json())))
 
-    def _clean_response(self, search_response):
+    def _clean_response(self, search_response: dict[str, Any]) -> dict[str, Any]:
         clean_response = []
         query = search_response["queryContext"]["originalQuery"]
         if "webPages" in search_response:

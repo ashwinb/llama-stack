@@ -4,6 +4,8 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
+from typing import Any
+
 from .bing_search import BingSearchToolRuntimeImpl
 from .config import BingSearchToolConfig
 
@@ -15,7 +17,7 @@ class BingSearchToolProviderDataValidator(BaseModel):
     bing_search_api_key: SecretStr
 
 
-async def get_adapter_impl(config: BingSearchToolConfig, _deps):
+async def get_adapter_impl(config: BingSearchToolConfig, _deps: dict[str, Any]) -> Any:
     impl = BingSearchToolRuntimeImpl(config)
     await impl.initialize()
     return impl
