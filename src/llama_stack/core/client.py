@@ -95,6 +95,7 @@ def create_api_client_class(protocol: type) -> type:
                 if j is None:
                     return None
                 # print(f"({protocol.__name__}) Returning {j}, type {return_type}")
+                assert return_type is not None
                 return parse_obj_as(return_type, j)
 
         async def _call_streaming(self, method_name: str, *args, **kwargs) -> Any:
@@ -194,7 +195,7 @@ def create_api_client_class(protocol: type) -> type:
 
             method_impl.__name__ = name
             method_impl.__qualname__ = f"APIClient.{name}"
-            method_impl.__signature__ = inspect.signature(method)
+            setattr(method_impl, "__signature__", inspect.signature(method))
             setattr(APIClient, name, method_impl)
 
     # Name the class after the protocol
