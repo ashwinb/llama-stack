@@ -32,6 +32,7 @@ from llama_stack_api import (
     ModelType,
     OpenAIChatCompletion,
     OpenAIChatCompletionChunk,
+    OpenAIChatCompletionContentPartImageParam,
     OpenAIChatCompletionRequestWithExtraBody,
     OpenAICompletion,
     OpenAICompletionRequestWithExtraBody,
@@ -74,10 +75,11 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
     # Allow arbitrary types for shared_ssl_context
     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
 
-    # Runtime-injected by routing_tables/common.py during provider initialization.
-    # Using Any to avoid circular imports with core/routing_tables/.
-    model_store: Any = None  # type: ignore[assignment]  # injected at runtime
-    __provider_id__: str = ""  # injected at runtime by the distribution system
+    # Runtime-injected by the routing table (routing_tables/common.py).
+    # Cannot import the concrete type without circular dependency, so we use Any.
+    model_store: Any = None
+    # Runtime-injected provider identifier string
+    __provider_id__: str = ""
 
     config: RemoteInferenceProviderConfig
 
@@ -360,7 +362,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             completion_kwargs["extra_body"] = extra_body
         resp = await self.client.completions.create(**completion_kwargs)
 
-        return await self._maybe_overwrite_id(resp, params.stream)  # type: ignore[no-any-return]
+        return await self._maybe_overwrite_id(resp, params.stream)
 
     async def openai_chat_completion(
         self,
@@ -384,14 +386,19 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             async def _localize_image_url(m: OpenAIMessageParam) -> OpenAIMessageParam:
                 if isinstance(m.content, list):
                     for c in m.content:
-                        if c.type == "image_url" and hasattr(c, "image_url") and c.image_url and c.image_url.url and "http" in c.image_url.url:  # ty: ignore[unresolved-attribute]
-                            localize_result = await localize_image_content(c.image_url.url)  # ty: ignore[unresolved-attribute]
+                        if (
+                            isinstance(c, OpenAIChatCompletionContentPartImageParam)
+                            and c.image_url
+                            and c.image_url.url
+                            and "http" in c.image_url.url
+                        ):
+                            localize_result = await localize_image_content(c.image_url.url)
                             if localize_result is None:
                                 raise ValueError(
-                                    f"Failed to localize image content from {c.image_url.url[:42]}{'...' if len(c.image_url.url) > 42 else ''}"  # ty: ignore[unresolved-attribute]
+                                    f"Failed to localize image content from {c.image_url.url[:42]}{'...' if len(c.image_url.url) > 42 else ''}"
                                 )
                             content, format = localize_result
-                            c.image_url.url = f"data:image/{format};base64,{base64.b64encode(content).decode('utf-8')}"  # ty: ignore[invalid-assignment]
+                            c.image_url.url = f"data:image/{format};base64,{base64.b64encode(content).decode('utf-8')}"
                 # else it's a string and we don't need to modify it
                 return m
 
@@ -431,7 +438,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             request_params["extra_body"] = extra_body
         resp = await self.client.chat.completions.create(**request_params)
 
-        return await self._maybe_overwrite_id(resp, params.stream)  # type: ignore[no-any-return]
+        return await self._maybe_overwrite_id(resp, params.stream)
 
     async def openai_embeddings(
         self,

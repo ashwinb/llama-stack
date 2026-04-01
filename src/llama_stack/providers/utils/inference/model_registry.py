@@ -269,14 +269,18 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
     async def should_refresh_models(self) -> bool:
         return False
 
-    def get_provider_model_id(self, identifier: str) -> str | None:
+    def get_provider_model_id(self, identifier: str | None) -> str | None:
+        if identifier is None:
+            return None
         return self.alias_to_provider_id_map.get(identifier, None)
 
     # TODO: why keep a separate llama model mapping?
-    def get_llama_model(self, provider_model_id: str) -> str | None:
+    def get_llama_model(self, provider_model_id: str | None) -> str | None:
+        if provider_model_id is None:
+            return None
         return self.provider_id_to_llama_model_map.get(provider_model_id, None)
 
-    async def check_model_availability(self, model: str) -> bool:
+    async def check_model_availability(self, model: str | None) -> bool:
         """
         Check if a specific model is available from the provider (non-static check).
 
@@ -291,6 +295,8 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
         :param model: The model identifier to check.
         :return: True if the model is available dynamically, False otherwise.
         """
+        if model is None:
+            return False
         logger.info(
             "check_model_availability is not implemented for . Returning False by default.",
             __name__=self.__class__.__name__,
@@ -312,7 +318,7 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
                 # note: we cannot provide a complete list of supported models without
                 #       getting a complete list from the provider, so we return "..."
                 all_supported_models = [*self.alias_to_provider_id_map.keys(), "..."]
-                raise UnsupportedModelError(model.provider_resource_id, all_supported_models)
+                raise UnsupportedModelError(model.provider_resource_id or "", all_supported_models)
 
         provider_resource_id = self.get_provider_model_id(model.model_id)
         if model.model_type == ModelType.embedding:
