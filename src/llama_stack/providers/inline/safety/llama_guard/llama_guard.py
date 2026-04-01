@@ -19,6 +19,7 @@ from llama_stack_api import (
     Inference,
     ModerationObject,
     ModerationObjectResults,
+    OpenAIChatCompletion,
     OpenAIChatCompletionRequestWithExtraBody,
     OpenAIMessageParam,
     OpenAIUserMessageParam,
@@ -172,7 +173,10 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
         # some shields like llama-guard require the first message to be a user message
         # since this might be a tool call, first role might not be user
         if len(messages) > 0 and messages[0].role != "user":
-            messages[0] = OpenAIUserMessageParam(content=messages[0].content)
+            first_content = messages[0].content
+            if first_content is None:
+                first_content = ""
+            messages[0] = OpenAIUserMessageParam(content=first_content)  # ty: ignore[invalid-argument-type]  # content union compatible at runtime
 
         # Use the inference API's model resolution instead of hardcoded mappings
         # This allows the shield to work with any registered model
@@ -188,6 +192,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             # For unknown models, use default Llama Guard 3 8B categories
             safety_categories = DEFAULT_LG_V3_SAFETY_CATEGORIES + [CAT_CODE_INTERPRETER_ABUSE]
 
+        assert model_id is not None, "Shield must have a provider_resource_id"
         impl = LlamaGuardShield(
             model=model_id,
             inference_api=self.inference_api,
@@ -207,7 +212,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             messages = [request.input]
 
         # convert to user messages format with role
-        messages = [OpenAIUserMessageParam(content=m) for m in messages]
+        user_messages: list[OpenAIMessageParam] = [OpenAIUserMessageParam(content=m) for m in messages]
 
         # Determine safety categories based on the model type
         # For known Llama Guard models, use specific categories
@@ -226,7 +231,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             safety_categories=safety_categories,
         )
 
-        return await impl.run_moderation(messages)
+        return await impl.run_moderation(user_messages)
 
 
 class LlamaGuardShield:
@@ -307,7 +312,8 @@ class LlamaGuardShield:
             temperature=0.0,  # default is 1, which is too high for safety
         )
         response = await self.inference_api.openai_chat_completion(params)
-        content = response.choices[0].message.content
+        assert isinstance(response, OpenAIChatCompletion), "Expected non-streaming response"
+        content = response.choices[0].message.content or ""
         content = content.strip()
         return self.get_shield_response(content)
 
@@ -395,7 +401,8 @@ class LlamaGuardShield:
             temperature=0.0,  # default is 1, which is too high for safety
         )
         response = await self.inference_api.openai_chat_completion(params)
-        content = response.choices[0].message.content
+        assert isinstance(response, OpenAIChatCompletion), "Expected non-streaming response"
+        content = response.choices[0].message.content or ""
         content = content.strip()
         return self.get_moderation_object(content)
 

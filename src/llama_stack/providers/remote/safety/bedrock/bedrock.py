@@ -43,6 +43,8 @@ class BedrockSafetyAdapter(ShieldToModerationMixin, Safety, ShieldsProtocolPriva
         pass
 
     async def register_shield(self, shield: Shield) -> None:
+        if shield.params is None:
+            raise ValueError("Bedrock shield requires params with 'guardrailVersion'")
         response = self.bedrock_client.list_guardrails(
             guardrailIdentifier=shield.provider_resource_id,
         )
@@ -63,6 +65,8 @@ class BedrockSafetyAdapter(ShieldToModerationMixin, Safety, ShieldsProtocolPriva
         if not shield:
             raise ValueError(f"Shield {request.shield_id} not found")
 
+        if shield.params is None:
+            raise ValueError(f"Shield {request.shield_id} missing required params")
         shield_params = shield.params
         logger.debug("run_shield", shield_params=shield_params, messages=request.messages)
 
