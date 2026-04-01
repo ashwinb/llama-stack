@@ -123,9 +123,9 @@ RESOURCES = [
 ]
 
 
-REGISTRY_REFRESH_INTERVAL_SECONDS = 300
-REGISTRY_REFRESH_TASK = None
-TEST_RECORDING_CONTEXT = None
+REGISTRY_REFRESH_INTERVAL_SECONDS: int = 300
+REGISTRY_REFRESH_TASK: asyncio.Task[None] | None = None
+TEST_RECORDING_CONTEXT: Any = None
 
 # ID fields for registered resources that should trigger skipping
 # when they resolve to empty/None (from conditional env vars like :+)
@@ -660,7 +660,7 @@ def cast_distro_name_to_string(config_dict: dict[str, Any]) -> dict[str, Any]:
     return config_dict
 
 
-def add_internal_implementations(impls: dict[Api, Any], config: StackConfig, policy: list) -> None:
+def add_internal_implementations(impls: dict[Api, Any], config: StackConfig, policy: list[Any]) -> None:
     """Add internal implementations (inspect, providers, admin, etc.) to the implementations dictionary."""
     inspect_impl = DistributionInspectImpl(
         DistributionInspectConfig(config=config),
@@ -698,7 +698,7 @@ def add_internal_implementations(impls: dict[Api, Any], config: StackConfig, pol
     impls[Api.connectors] = connectors_impl
 
 
-def _initialize_storage(run_config: StackConfig):
+def _initialize_storage(run_config: StackConfig) -> None:
     kv_backends: dict[str, StorageBackendConfig] = {}
     sql_backends: dict[str, StorageBackendConfig] = {}
     for backend_name, backend_config in run_config.storage.backends.items():
@@ -723,11 +723,11 @@ class Stack:
     def __init__(self, run_config: StackConfig, provider_registry: ProviderRegistry | None = None):
         self.run_config = run_config
         self.provider_registry = provider_registry
-        self.impls = None
+        self.impls: dict[Api, Any] | None = None
 
     # Produces a stack of providers for the given run config. Not all APIs may be
     # asked for in the run config.
-    async def initialize(self):
+    async def initialize(self) -> None:
         if "LLAMA_STACK_TEST_INFERENCE_MODE" in os.environ:
             from llama_stack.testing.api_recorder import setup_api_recording
 
@@ -744,7 +744,7 @@ class Stack:
         dist_registry, _ = await create_dist_registry(stores.metadata, self.run_config.distro_name)
         policy = self.run_config.server.auth.access_policy if self.run_config.server.auth else []
 
-        internal_impls = {}
+        internal_impls: dict[Api, Any] = {}
         add_internal_implementations(internal_impls, self.run_config, policy)
 
         impls = await resolve_impls(
@@ -770,13 +770,13 @@ class Stack:
         await validate_safety_config(self.run_config.safety, impls)
         self.impls = impls
 
-    def create_registry_refresh_task(self):
+    def create_registry_refresh_task(self) -> None:
         assert self.impls is not None, "Must call initialize() before starting"
 
         global REGISTRY_REFRESH_TASK
         REGISTRY_REFRESH_TASK = asyncio.create_task(refresh_registry_task(self.impls))
 
-        def cb(task):
+        def cb(task: asyncio.Task[None]) -> None:
             import traceback
 
             if task.cancelled():
@@ -789,7 +789,7 @@ class Stack:
 
         REGISTRY_REFRESH_TASK.add_done_callback(cb)
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         for impl in self.impls.values():
             impl_name = impl.__class__.__name__
             logger.debug("Shutting down", impl_name=impl_name)
@@ -829,7 +829,7 @@ class Stack:
             logger.exception("Failed to shutdown SQL store backends", error=str(e))
 
 
-async def refresh_registry_once(impls: dict[Api, Any]):
+async def refresh_registry_once(impls: dict[Api, Any]) -> None:
     """Refresh all routing table registries once by calling their refresh methods."""
     logger.debug("refreshing registry")
     routing_tables = [v for v in impls.values() if isinstance(v, CommonRoutingTableImpl)]
@@ -837,7 +837,7 @@ async def refresh_registry_once(impls: dict[Api, Any]):
         await routing_table.refresh()
 
 
-async def refresh_registry_task(impls: dict[Api, Any]):
+async def refresh_registry_task(impls: dict[Api, Any]) -> None:
     """Background task that periodically refreshes routing table registries."""
     logger.info("starting registry refresh task")
     while True:

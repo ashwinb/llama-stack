@@ -18,7 +18,7 @@ from llama_stack.log import get_logger
 log = get_logger(name=__name__, category="core")
 
 
-def is_list_of_primitives(field_type):
+def is_list_of_primitives(field_type: Any) -> bool:
     """Check if a field type is a List of primitive types."""
     origin = get_origin(field_type)
     if origin is list or origin is list:
@@ -28,7 +28,7 @@ def is_list_of_primitives(field_type):
     return False
 
 
-def is_basemodel_without_fields(typ):
+def is_basemodel_without_fields(typ: Any) -> bool:
     """Check if a type is a Pydantic BaseModel subclass with no defined fields.
 
     Args:
@@ -40,7 +40,7 @@ def is_basemodel_without_fields(typ):
     return inspect.isclass(typ) and issubclass(typ, BaseModel) and len(typ.__fields__) == 0
 
 
-def can_recurse(typ):
+def can_recurse(typ: Any) -> bool:
     """Check if a type is a Pydantic BaseModel subclass with fields that can be recursively prompted.
 
     Args:
@@ -52,19 +52,19 @@ def can_recurse(typ):
     return inspect.isclass(typ) and issubclass(typ, BaseModel) and len(typ.__fields__) > 0
 
 
-def get_literal_values(field):
+def get_literal_values(field: FieldInfo) -> tuple[Any, ...] | None:
     """Extract literal values from a field if it's a Literal type."""
     if get_origin(field.annotation) is Literal:
         return get_args(field.annotation)
     return None
 
 
-def is_optional(field_type):
+def is_optional(field_type: Any) -> bool:
     """Check if a field type is Optional."""
     return get_origin(field_type) is Union and type(None) in get_args(field_type)
 
 
-def get_non_none_type(field_type):
+def get_non_none_type(field_type: Any) -> Any:
     """Get the non-None type from an Optional type."""
     return next(arg for arg in get_args(field_type) if arg is not type(None))
 
@@ -88,7 +88,7 @@ def manually_validate_field(model: type[BaseModel], field_name: str, value: Any)
     return value
 
 
-def is_discriminated_union(typ) -> bool:
+def is_discriminated_union(typ: Any) -> bool:
     """Check if a type or FieldInfo represents a discriminated union.
 
     Args:
@@ -107,10 +107,10 @@ def is_discriminated_union(typ) -> bool:
 
 
 def prompt_for_discriminated_union(
-    field_name,
-    typ,
-    existing_value,
-):
+    field_name: str,
+    typ: Any,
+    existing_value: BaseModel | None,
+) -> BaseModel:
     """Interactively prompt the user to select and configure a discriminated union variant.
 
     Args:
