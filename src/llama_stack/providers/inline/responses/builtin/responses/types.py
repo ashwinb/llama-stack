@@ -212,11 +212,7 @@ class ChatCompletionContext(BaseModel):
             extra_body=extra_body,
         )
         if not isinstance(inputs, str):
-            self.approval_requests = [
-                input
-                for input in inputs
-                if isinstance(input, OpenAIResponseMCPApprovalRequest)
-            ]
+            self.approval_requests = [input for input in inputs if isinstance(input, OpenAIResponseMCPApprovalRequest)]
             self.approval_responses = {
                 input.approval_request_id: input
                 for input in inputs

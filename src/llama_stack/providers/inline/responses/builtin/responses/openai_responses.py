@@ -451,7 +451,9 @@ class OpenAIResponsesImpl:
         """
         # ResponseItemInclude is a string enum; store expects list[str]
         include_strs: list[str] | None = [str(i) for i in include] if include else None
-        return await self.responses_store.list_response_input_items(response_id, after, before, include_strs, limit, order)
+        return await self.responses_store.list_response_input_items(
+            response_id, after, before, include_strs, limit, order
+        )
 
     async def _store_response(
         self,
