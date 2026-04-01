@@ -133,8 +133,10 @@ class ToolContext(BaseModel):
             # tools that are not the same or were not previously defined need to be processed:
             self.tools_to_process = tools_to_process
             # for all matched definitions, get the mcp_list_tools objects from the previous output:
-            self.previous_tool_listings = [
-                obj for obj in previous_response.output if obj.type == "mcp_list_tools" and obj.server_label in matched
+            self.previous_tool_listings = [  # ty: ignore[invalid-assignment]  # narrowed by type == "mcp_list_tools" check
+                obj
+                for obj in previous_response.output
+                if obj.type == "mcp_list_tools" and obj.server_label in matched  # ty: ignore[unresolved-attribute]  # server_label exists on mcp_list_tools items
             ]
             # reconstruct the tool to server mappings that can be reused:
             for listing in self.previous_tool_listings:
@@ -210,9 +212,11 @@ class ChatCompletionContext(BaseModel):
             extra_body=extra_body,
         )
         if not isinstance(inputs, str):
-            self.approval_requests = [input for input in inputs if input.type == "mcp_approval_request"]
-            self.approval_responses = {
-                input.approval_request_id: input for input in inputs if input.type == "mcp_approval_response"
+            self.approval_requests = [input for input in inputs if input.type == "mcp_approval_request"]  # ty: ignore[invalid-assignment]  # narrowed by type check
+            self.approval_responses = {  # ty: ignore[invalid-assignment]  # narrowed by type check
+                input.approval_request_id: input  # ty: ignore[unresolved-attribute]  # approval_request_id exists on mcp_approval_response items
+                for input in inputs
+                if input.type == "mcp_approval_response"
             }
 
     def approval_response(self, tool_name: str, arguments: str) -> OpenAIResponseMCPApprovalResponse | None:

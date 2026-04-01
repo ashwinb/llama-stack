@@ -443,7 +443,7 @@ class OpenAIResponsesImpl:
         :param order: The order to return the input items in.
         :returns: An ListOpenAIResponseInputItem.
         """
-        return await self.responses_store.list_response_input_items(response_id, after, before, include, limit, order)
+        return await self.responses_store.list_response_input_items(response_id, after, before, include, limit, order)  # ty: ignore[invalid-argument-type]  # ResponseItemInclude is str-based enum
 
     async def _store_response(
         self,
@@ -541,7 +541,7 @@ class OpenAIResponsesImpl:
             match stream_chunk.type:
                 case "response.in_progress":
                     # Initial persistence when response starts
-                    in_progress_response = stream_chunk.response
+                    in_progress_response = stream_chunk.response  # ty: ignore[unresolved-attribute]  # narrowed by match case
                     await self.responses_store.upsert_response_object(
                         response_object=in_progress_response,
                         input=input_items,
@@ -569,7 +569,7 @@ class OpenAIResponsesImpl:
 
                 case "response.completed" | "response.incomplete":
                     # Final persistence when response finishes
-                    final_response = stream_chunk.response
+                    final_response = stream_chunk.response  # ty: ignore[unresolved-attribute]  # narrowed by match case
                     messages_to_store = list(
                         filter(
                             lambda x: not isinstance(x, OpenAISystemMessageParam),
@@ -584,7 +584,7 @@ class OpenAIResponsesImpl:
 
                 case "response.failed":
                     # Persist failed state so GET shows error
-                    failed_response = stream_chunk.response
+                    failed_response = stream_chunk.response  # ty: ignore[unresolved-attribute]  # narrowed by match case
                     # Preserve any accumulated non-system messages for failed responses
                     messages_to_store = list(
                         filter(
@@ -761,7 +761,7 @@ class OpenAIResponsesImpl:
                         if final_response is not None:
                             logger.error(
                                 "The response stream produced multiple terminal events, when it should produce exactly one",
-                                response_id=stream_chunk.response.id,
+                                response_id=stream_chunk.response.id,  # ty: ignore[unresolved-attribute]  # narrowed by match case
                                 first_terminal_event=final_event_type,
                                 second_terminal_event=stream_chunk.type,
                                 model=model,
@@ -769,10 +769,10 @@ class OpenAIResponsesImpl:
                                 previous_response_id=previous_response_id,
                             )
                             raise InternalServerError()
-                        final_response = stream_chunk.response
+                        final_response = stream_chunk.response  # ty: ignore[unresolved-attribute]  # narrowed by match case
                         final_event_type = stream_chunk.type
                     case "response.failed":
-                        failed_response = stream_chunk.response
+                        failed_response = stream_chunk.response  # ty: ignore[unresolved-attribute]  # narrowed by match case
                         error_message = (
                             failed_response.error.message
                             if failed_response.error
@@ -841,7 +841,9 @@ class OpenAIResponsesImpl:
         created_at = int(time.time())
 
         # Normalize input to list format for storage
-        input_items = [OpenAIResponseMessage(content=input, role="user")] if isinstance(input, str) else input
+        input_items: list[OpenAIResponseInput] = (
+            [OpenAIResponseMessage(content=input, role="user")] if isinstance(input, str) else list(input)
+        )
 
         # Create initial queued response
         queued_response = OpenAIResponseObject(
@@ -995,7 +997,7 @@ class OpenAIResponsesImpl:
 
             match stream_chunk.type:
                 case "response.completed" | "response.incomplete" | "response.failed":
-                    result_response = stream_chunk.response
+                    result_response = stream_chunk.response  # ty: ignore[unresolved-attribute]  # narrowed by match case
                 case _:
                     pass
 
@@ -1145,11 +1147,11 @@ class OpenAIResponsesImpl:
             async for stream_chunk in orchestrator.create_response():
                 match stream_chunk.type:
                     case "response.completed" | "response.incomplete":
-                        final_response = stream_chunk.response
+                        final_response = stream_chunk.response  # ty: ignore[unresolved-attribute]  # narrowed by match case
                     case "response.failed":
-                        failed_response = stream_chunk.response
+                        failed_response = stream_chunk.response  # ty: ignore[unresolved-attribute]  # narrowed by match case
                     case "response.output_item.done":
-                        item = stream_chunk.item
+                        item = stream_chunk.item  # ty: ignore[unresolved-attribute]  # narrowed by match case
                         output_items.append(item)
                     case _:
                         pass  # Other event types
