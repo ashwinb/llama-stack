@@ -8,9 +8,9 @@ import datetime
 from time import time
 from uuid import uuid4
 
-from boto3 import Session
-from botocore.credentials import RefreshableCredentials
-from botocore.session import get_session
+from boto3 import Session  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
+from botocore.credentials import RefreshableCredentials  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
+from botocore.session import get_session  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
 
 
 class RefreshableBotoSession:
@@ -26,10 +26,10 @@ class RefreshableBotoSession:
 
     def __init__(
         self,
-        region_name: str = None,
-        profile_name: str = None,
-        sts_arn: str = None,
-        session_name: str = None,
+        region_name: str | None = None,
+        profile_name: str | None = None,
+        sts_arn: str | None = None,
+        session_name: str | None = None,
         session_ttl: int = 30000,
     ):
         """
@@ -60,7 +60,7 @@ class RefreshableBotoSession:
         self.session_name = session_name or uuid4().hex
         self.session_ttl = session_ttl
 
-    def __get_session_credentials(self):
+    def __get_session_credentials(self) -> dict[str, str | None]:
         """
         Get session credentials
         """
