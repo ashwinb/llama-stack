@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from google.genai import types as genai_types
+from google.genai import types as genai_types  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 from llama_stack.providers.utils.inference.http_client import _build_proxy_mounts, _build_ssl_context

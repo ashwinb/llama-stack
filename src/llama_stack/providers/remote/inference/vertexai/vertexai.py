@@ -12,9 +12,9 @@ import time
 from collections.abc import AsyncIterator
 from typing import Any, cast
 
-from google.genai import Client
-from google.genai import types as genai_types
-from google.oauth2.credentials import Credentials
+from google.genai import Client  # ty: ignore[unresolved-import]
+from google.genai import types as genai_types  # ty: ignore[unresolved-import]
+from google.oauth2.credentials import Credentials  # ty: ignore[unresolved-import]
 from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 from llama_stack.core.request_headers import NeedsRequestProviderData
@@ -32,6 +32,7 @@ from llama_stack_api import (
     ModelType,
     OpenAIChatCompletion,
     OpenAIChatCompletionChunk,
+    OpenAIChatCompletionContentPartImageParam,
     OpenAIChatCompletionRequestWithExtraBody,
     OpenAICompletion,
     OpenAICompletionRequestWithExtraBody,
@@ -193,7 +194,7 @@ class VertexAIInferenceAdapter(NeedsRequestProviderData, BaseModel):
         provider_resource_id = model.provider_resource_id or model.identifier
         if not await self.check_model_availability(provider_resource_id):
             raise ValueError(
-                f"Model {provider_resource_id} is not available from provider {self.__provider_id__}"  # type: ignore[attr-defined]
+                f"Model {provider_resource_id} is not available from provider {self.__provider_id__}"  # ty: ignore[unresolved-attribute]
             )
         return model
 
@@ -296,8 +297,8 @@ class VertexAIInferenceAdapter(NeedsRequestProviderData, BaseModel):
 
     async def _get_provider_model_id(self, model: str) -> str:
         # model_store is injected at runtime by the routing infra
-        if hasattr(self, "model_store") and self.model_store and await self.model_store.has_model(model):  # type: ignore[attr-defined]
-            model_obj: Model = await self.model_store.get_model(model)  # type: ignore[attr-defined]
+        if hasattr(self, "model_store") and self.model_store and await self.model_store.has_model(model):  # ty: ignore[unresolved-attribute]
+            model_obj: Model = await self.model_store.get_model(model)  # ty: ignore[unresolved-attribute]
             if model_obj.provider_resource_id is None:
                 raise ValueError(f"Model {model} has no provider_resource_id")
             return model_obj.provider_resource_id
@@ -352,7 +353,7 @@ class VertexAIInferenceAdapter(NeedsRequestProviderData, BaseModel):
                 continue
             if metadata := self.embedding_model_metadata.get(provider_model_id):
                 model = Model(
-                    provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                    provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]
                     provider_resource_id=provider_model_id,
                     identifier=provider_model_id,
                     model_type=ModelType.embedding,
@@ -360,7 +361,7 @@ class VertexAIInferenceAdapter(NeedsRequestProviderData, BaseModel):
                 )
             else:
                 model = Model(
-                    provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                    provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]
                     provider_resource_id=provider_model_id,
                     identifier=provider_model_id,
                     model_type=ModelType.llm,
@@ -607,7 +608,7 @@ class VertexAIInferenceAdapter(NeedsRequestProviderData, BaseModel):
         if isinstance(message.content, list):
             for content_part in message.content:
                 if (
-                    content_part.type == "image_url"
+                    isinstance(content_part, OpenAIChatCompletionContentPartImageParam)
                     and content_part.image_url
                     and content_part.image_url.url
                     and "http" in content_part.image_url.url

@@ -6,7 +6,7 @@
 
 from collections.abc import AsyncIterator, Iterable
 
-from databricks.sdk import WorkspaceClient
+from databricks.sdk import WorkspaceClient  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 from llama_stack.providers.utils.inference.openai_mixin import OpenAIMixin

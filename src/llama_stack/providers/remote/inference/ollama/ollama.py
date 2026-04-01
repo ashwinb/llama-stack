@@ -7,7 +7,7 @@
 
 import asyncio
 
-from ollama import AsyncClient as AsyncOllamaClient
+from ollama import AsyncClient as AsyncOllamaClient  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 from llama_stack.providers.remote.inference.ollama.config import OllamaImplConfig
