@@ -427,9 +427,9 @@ class StreamingResponseOrchestrator:
         chat_tool_choice = None
         # Track allowed tools for filtering (persists across iterations)
         allowed_tool_names: set[str] | None = None
-        if self.ctx.tool_choice and len(self.ctx.chat_tools) > 0:
+        if self.ctx.tool_choice and len(self.ctx.chat_tools) > 0:  # ty: ignore[invalid-argument-type]  # chat_tools is narrowed by truthiness check above
             processed_tool_choice = await _process_tool_choice(
-                self.ctx.chat_tools,
+                self.ctx.chat_tools,  # ty: ignore[invalid-argument-type]  # chat_tools narrowed by truthiness check above
                 self.ctx.tool_choice,
                 self.server_label_to_tools,
             )
@@ -488,7 +488,7 @@ class StreamingResponseOrchestrator:
                 if allowed_tool_names is not None:
                     effective_tools = [
                         tool
-                        for tool in self.ctx.chat_tools
+                        for tool in self.ctx.chat_tools  # ty: ignore[not-iterable]  # chat_tools is not None when allowed_tool_names is set
                         if tool.get("function", {}).get("name") in allowed_tool_names
                     ]
                 logger.debug("calling openai_chat_completion with tools", effective_tools=effective_tools)
@@ -514,7 +514,7 @@ class StreamingResponseOrchestrator:
                     model=self.ctx.model,
                     messages=messages,
                     # Pydantic models are dict-compatible but mypy treats them as distinct types
-                    tools=effective_tools,  # type: ignore[arg-type]
+                    tools=effective_tools,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]  # Pydantic models are dict-compatible
                     tool_choice=chat_tool_choice,
                     stream=True,
                     temperature=self.ctx.temperature,
@@ -526,7 +526,7 @@ class StreamingResponseOrchestrator:
                     parallel_tool_calls=effective_parallel_tool_calls,
                     reasoning_effort=self.reasoning.effort if self.reasoning else None,
                     safety_identifier=self.safety_identifier,
-                    service_tier=self.service_tier,
+                    service_tier=self.service_tier,  # ty: ignore[invalid-argument-type]  # service_tier stored as str but ServiceTier expected
                     max_completion_tokens=remaining_output_tokens,
                     prompt_cache_key=self.prompt_cache_key,
                     top_logprobs=self.top_logprobs,
@@ -1245,7 +1245,7 @@ class StreamingResponseOrchestrator:
             message_item_id=message_item_id,
             tool_call_item_ids=tool_call_item_ids,
             content_part_emitted=content_part_emitted,
-            logprobs=OpenAIChoiceLogprobs(content=chat_response_logprobs) if chat_response_logprobs else None,
+            logprobs=OpenAIChoiceLogprobs(content=chat_response_logprobs) if chat_response_logprobs else None,  # ty: ignore[invalid-argument-type]  # logprobs list is compatible with expected type
             service_tier=chunk_service_tier,
         )
 
@@ -1259,7 +1259,7 @@ class StreamingResponseOrchestrator:
 
         assistant_message = OpenAIChatCompletionResponseMessage(
             content=result.content_text,
-            tool_calls=tool_calls,
+            tool_calls=tool_calls,  # ty: ignore[invalid-argument-type]  # list[ToolCall] is subset of expected union list
         )
         return OpenAIChatCompletion(
             id=result.response_id,
@@ -1268,7 +1268,7 @@ class StreamingResponseOrchestrator:
                     message=assistant_message,
                     finish_reason=result.finish_reason,
                     index=0,
-                    logprobs=result.logprobs,
+                    logprobs=result.logprobs,  # ty: ignore[invalid-argument-type]  # logprobs type stored as list but OpenAIChoiceLogprobs expected
                 )
             ],
             created=result.created,
@@ -1419,7 +1419,7 @@ class StreamingResponseOrchestrator:
         """Process all tools and emit appropriate streaming events."""
 
         def make_openai_tool(tool_name: str, tool: ToolDef) -> ChatCompletionToolParam:
-            return convert_tooldef_to_openai_tool(
+            return convert_tooldef_to_openai_tool(  # ty: ignore[invalid-return-type]  # returns dict but ChatCompletionToolParam expects TypedDict
                 tool_name=tool_name,
                 description=tool.description,
                 input_schema=tool.input_schema,
@@ -1459,7 +1459,7 @@ class StreamingResponseOrchestrator:
                 )
                 self.ctx.chat_tools.append(make_openai_tool(tool_name, file_search_tool_def))
             elif input_tool.type == "mcp":
-                async for stream_event in self._process_mcp_tool(input_tool, output_messages):
+                async for stream_event in self._process_mcp_tool(input_tool, output_messages):  # ty: ignore[invalid-argument-type]  # input_tool narrowed by type=="mcp" check above
                     yield stream_event
             else:
                 raise ValueError(f"Llama Stack OpenAI Responses does not yet support tool type: {input_tool.type}")
@@ -1469,7 +1469,7 @@ class StreamingResponseOrchestrator:
     ) -> AsyncIterator[OpenAIResponseObjectStream]:
         """Process an MCP tool configuration and emit appropriate streaming events."""
         # Resolve connector_id to server_url if provided
-        mcp_tool = await resolve_mcp_connector_id(mcp_tool, self.connectors_api)
+        mcp_tool = await resolve_mcp_connector_id(mcp_tool, self.connectors_api)  # ty: ignore[invalid-argument-type]  # connectors_api may be None but is runtime-injected
 
         # Emit mcp_list_tools.in_progress
         self.sequence_number += 1
@@ -1501,9 +1501,9 @@ class StreamingResponseOrchestrator:
 
             # TODO: follow semantic conventions for Open Telemetry tool spans
             # https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#execute-tool-span
-            with tracer.start_as_current_span("list_mcp_tools", attributes=attributes):
+            with tracer.start_as_current_span("list_mcp_tools", attributes=attributes):  # ty: ignore[invalid-argument-type]  # dict[str, str | None] compatible with expected Mapping
                 tool_defs = await list_mcp_tools(
-                    endpoint=mcp_tool.server_url,
+                    endpoint=mcp_tool.server_url,  # ty: ignore[invalid-argument-type]  # server_url may be None but is resolved above
                     headers=mcp_tool.headers,
                     authorization=mcp_tool.authorization,
                     session_manager=session_manager,
@@ -1660,7 +1660,7 @@ class StreamingResponseOrchestrator:
             )
             if self.ctx.chat_tools is None:
                 self.ctx.chat_tools = []
-            self.ctx.chat_tools.append(openai_tool)  # type: ignore[arg-type]  # Returns dict but ChatCompletionToolParam expects TypedDict
+            self.ctx.chat_tools.append(openai_tool)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]  # Returns dict but ChatCompletionToolParam expects TypedDict
 
         mcp_list_message = OpenAIResponseOutputMessageMCPListTools(
             id=f"mcp_list_{uuid.uuid4()}",
@@ -1743,13 +1743,13 @@ async def _process_tool_choice(
                 if tool_name and tool_name not in chat_tool_names:
                     logger.warning("Tool not found in chat tools", tool_name=tool_name)
                     return None
-                return OpenAIChatCompletionToolChoiceCustomTool(name=tool_name)
+                return OpenAIChatCompletionToolChoiceCustomTool(name=tool_name)  # ty: ignore[invalid-argument-type]  # tool_name checked above but ty can't narrow getattr result
 
             case OpenAIResponseInputToolChoiceFunctionTool():
                 if tool_name and tool_name not in chat_tool_names:
                     logger.warning("Tool not found in chat tools", tool_name=tool_name)
                     return None
-                return OpenAIChatCompletionToolChoiceFunctionTool(name=tool_name)
+                return OpenAIChatCompletionToolChoiceFunctionTool(name=tool_name)  # ty: ignore[invalid-argument-type]  # tool_name checked above but ty can't narrow getattr result
 
             case OpenAIResponseInputToolChoiceFileSearch():
                 if "file_search" not in chat_tool_names:
@@ -1764,7 +1764,7 @@ async def _process_tool_choice(
                 return OpenAIChatCompletionToolChoiceFunctionTool(name="web_search")
 
             case OpenAIResponseInputToolChoiceMCPTool():
-                tool_choice = convert_mcp_tool_choice(
+                tool_choice = convert_mcp_tool_choice(  # ty: ignore[invalid-assignment]  # reassigning tool_choice to intermediate result for processing below
                     chat_tool_names,
                     tool_choice.server_label,
                     server_label_to_tools,
