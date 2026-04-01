@@ -87,7 +87,9 @@ class RefreshableBotoSession:
                 "access_key": session_credentials.access_key,
                 "secret_key": session_credentials.secret_key,
                 "token": session_credentials.token,
-                "expiry_time": datetime.datetime.fromtimestamp(time() + (self.session_ttl or 30000), datetime.UTC).isoformat(),
+                "expiry_time": datetime.datetime.fromtimestamp(
+                    time() + (self.session_ttl or 30000), datetime.UTC
+                ).isoformat(),
             }
 
         return credentials

@@ -357,6 +357,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         resp = await self.client.completions.create(**completion_kwargs)
 
         return await self._maybe_overwrite_id(resp, params.stream)
+
     async def openai_chat_completion(
         self,
         params: OpenAIChatCompletionRequestWithExtraBody,
@@ -429,6 +430,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         resp = await self.client.chat.completions.create(**request_params)
 
         return await self._maybe_overwrite_id(resp, params.stream)
+
     async def openai_embeddings(
         self,
         params: OpenAIEmbeddingsRequestWithExtraBody,

@@ -6,7 +6,6 @@
 
 import base64
 import re
-from typing import Any, Union
 
 import httpx
 
@@ -22,7 +21,14 @@ from llama_stack_api import (
 log = get_logger(name=__name__, category="providers::utils")
 
 
-ContentItem = Union[str, TextContentItem, ImageContentItem, OpenAIChatCompletionContentPartTextParam, OpenAIChatCompletionContentPartImageParam, OpenAIFile]
+ContentItem = (
+    str
+    | TextContentItem
+    | ImageContentItem
+    | OpenAIChatCompletionContentPartTextParam
+    | OpenAIChatCompletionContentPartImageParam
+    | OpenAIFile
+)
 
 
 def interleaved_content_as_str(
