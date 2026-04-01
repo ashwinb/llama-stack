@@ -57,8 +57,8 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             raise ValueError("file:// URIs are not supported. Please use the Files API (/v1/files) to upload files.")
         if uri.startswith("data:"):
             parts = parse_data_url(uri)
-            mime_type = parts["mimetype"]
-            data = parts["data"]
+            mime_type = str(parts["mimetype"])
+            data = str(parts["data"])
 
             if parts["is_base64"]:
                 file_data = base64.b64decode(data)
@@ -76,14 +76,14 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
         if isinstance(doc.content, str):
             content_str = doc.content
         else:
-            content_str = interleaved_content_as_str(doc.content)
+            content_str = interleaved_content_as_str(doc.content)  # ty: ignore[invalid-argument-type]
 
         if content_str.startswith("file://"):
             raise ValueError("file:// URIs are not supported. Please use the Files API (/v1/files) to upload files.")
         if content_str.startswith("data:"):
             parts = parse_data_url(content_str)
-            mime_type = parts["mimetype"]
-            data = parts["data"]
+            mime_type = str(parts["mimetype"])
+            data = str(parts["data"])
 
             if parts["is_base64"]:
                 file_data = base64.b64decode(data)
@@ -239,7 +239,7 @@ class FileSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime):
             return RAGQueryResult(content=None)
 
         # sort by score
-        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)  # type: ignore
+        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)
         chunks = chunks[: query_config.max_chunks]
 
         tokens = 0
@@ -287,7 +287,7 @@ class FileSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime):
         picked.append(TextContentItem(text=footer_template))
         picked.append(
             TextContentItem(
-                text=context_template.format(query=interleaved_content_as_str(content), annotation_instruction="")
+                text=context_template.format(query=interleaved_content_as_str(content), annotation_instruction="")  # ty: ignore[invalid-argument-type]
             )
         )
 
