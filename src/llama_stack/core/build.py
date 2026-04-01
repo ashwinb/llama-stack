@@ -7,7 +7,7 @@
 import sys
 
 from pydantic import BaseModel
-from termcolor import cprint
+from termcolor import cprint  # ty: ignore[unresolved-import]
 
 from llama_stack.core.datatypes import StackConfig
 from llama_stack.core.distribution import get_provider_registry

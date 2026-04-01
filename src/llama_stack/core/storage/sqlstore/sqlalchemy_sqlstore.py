@@ -6,7 +6,7 @@
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal, cast
 
-from sqlalchemy import (
+from sqlalchemy import (  # ty: ignore[unresolved-import]
     JSON,
     Boolean,
     Column,
@@ -22,9 +22,9 @@ from sqlalchemy import (
     select,
     text,
 )
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.ext.asyncio.engine import AsyncEngine
-from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # ty: ignore[unresolved-import]
+from sqlalchemy.ext.asyncio.engine import AsyncEngine  # ty: ignore[unresolved-import]
+from sqlalchemy.sql.elements import ColumnElement  # ty: ignore[unresolved-import]
 
 from llama_stack.core.storage.datatypes import PostgresSqlStoreConfig, SqlAlchemySqlStoreConfig
 from llama_stack.log import get_logger
@@ -433,10 +433,10 @@ class SqlAlchemySqlStoreImpl(SqlStore):
 
     def _get_dialect_insert(self, table: Table):
         if self._is_sqlite_backend:
-            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert  # ty: ignore[unresolved-import]
 
             return sqlite_insert(table)
         else:
-            from sqlalchemy.dialects.postgresql import insert as pg_insert
+            from sqlalchemy.dialects.postgresql import insert as pg_insert  # ty: ignore[unresolved-import]
 
             return pg_insert(table)

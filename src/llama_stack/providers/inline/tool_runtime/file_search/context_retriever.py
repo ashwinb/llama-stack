@@ -5,7 +5,7 @@
 # the root directory of this source tree.
 
 
-from jinja2 import Template
+from jinja2 import Template  # ty: ignore[unresolved-import]
 
 from llama_stack.providers.utils.inference.prompt_adapter import (
     interleaved_content_as_str,
