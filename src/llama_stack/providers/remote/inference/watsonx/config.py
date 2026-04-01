@@ -41,7 +41,7 @@ class WatsonXConfig(RemoteInferenceProviderConfig):
     )
 
     @classmethod
-    def sample_run_config(cls, **kwargs) -> dict[str, Any]:
+    def sample_run_config(cls, **kwargs: Any) -> dict[str, Any]:
         return {
             "base_url": "${env.WATSONX_BASE_URL:=https://us-south.ml.cloud.ibm.com}",
             "api_key": "${env.WATSONX_API_KEY:=}",

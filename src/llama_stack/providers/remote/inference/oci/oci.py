@@ -78,7 +78,8 @@ class OCIInferenceAdapter(OpenAIMixin):
             return oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
         return None
 
-    def _get_oci_config(self) -> dict:
+    def _get_oci_config(self) -> dict[str, Any]:
+        config: dict[str, Any]
         if self.config.oci_auth_type == OCI_AUTH_TYPE_INSTANCE_PRINCIPAL:
             config = {"region": self.config.oci_region}
         elif self.config.oci_auth_type == OCI_AUTH_TYPE_CONFIG_FILE:
@@ -87,6 +88,8 @@ class OCIInferenceAdapter(OpenAIMixin):
                 raise ValueError(
                     "Region not specified in config. Please specify in config or with OCI_REGION env variable."
                 )
+        else:
+            raise ValueError(f"Invalid OCI authentication type: {self.config.oci_auth_type}")
 
         return config
 
