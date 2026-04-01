@@ -6,12 +6,11 @@
 
 from typing import Any
 
+from .code_scanner import BuiltinCodeScannerSafetyImpl
 from .config import CodeScannerConfig
 
 
-async def get_provider_impl(config: CodeScannerConfig, deps: dict[str, Any]):
-    from .code_scanner import BuiltinCodeScannerSafetyImpl
-
+async def get_provider_impl(config: CodeScannerConfig, deps: dict[str, Any]) -> BuiltinCodeScannerSafetyImpl:
     impl = BuiltinCodeScannerSafetyImpl(config, deps)
     await impl.initialize()
     return impl
