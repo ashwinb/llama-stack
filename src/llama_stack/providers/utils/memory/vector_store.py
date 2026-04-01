@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from functools import cache
 from typing import TYPE_CHECKING, Any
 
-import chardet
+import chardet  # ty: ignore[unresolved-import]
 import tiktoken
-from pypdf import PdfReader
+from pypdf import PdfReader  # ty: ignore[unresolved-import]
 
 if TYPE_CHECKING:
     import numpy as np

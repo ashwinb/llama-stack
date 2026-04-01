@@ -73,7 +73,7 @@ VALID_SCHEMAS_FOR_EVAL = [
 ]
 
 
-def get_valid_schemas(api_str: str):
+def get_valid_schemas(api_str: str) -> list[dict[str, Any]]:
     """Return the valid dataset schemas for the given API.
 
     Args:

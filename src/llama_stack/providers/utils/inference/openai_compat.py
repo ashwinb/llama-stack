@@ -57,7 +57,7 @@ def convert_tooldef_to_openai_tool(
     return out
 
 
-async def prepare_openai_completion_params(**params):
+async def prepare_openai_completion_params(**params: Any) -> dict[str, Any]:
     """Prepare keyword arguments for OpenAI-compatible completion calls.
 
     Args:

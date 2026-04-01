@@ -870,11 +870,11 @@ class OpenAIVectorStoreMixin(ABC):
             # TODO: Add support for other types of content
             content = []
             for item in chunk.content:
-                if item.type == "text":
+                if isinstance(item, TextContentItem):
                     content_item = VectorStoreContent(type="text", text=item.text, **fields)
                     content.append(content_item)
         else:
-            if chunk.content.type != "text":
+            if not isinstance(chunk.content, TextContentItem):
                 raise ValueError(f"Unsupported content type: {chunk.content.type}")
 
             content_item = VectorStoreContent(type="text", text=chunk.content.text, **fields)
@@ -1003,7 +1003,7 @@ class OpenAIVectorStoreMixin(ABC):
                 content_response = await self.files_api.openai_retrieve_file_content(
                     RetrieveFileContentRequest(file_id=file_id)
                 )
-                full_content = content_from_data_and_mime_type(content_response.body, mime_type)
+                full_content = content_from_data_and_mime_type(bytes(content_response.body), mime_type)
                 await self._execute_contextual_chunk_transformation(chunks, full_content, chunking_strategy.contextual)
             if not chunks:
                 vector_store_file_object.status = "failed"
@@ -1104,7 +1104,7 @@ class OpenAIVectorStoreMixin(ABC):
             RetrieveFileContentRequest(file_id=file_id)
         )
 
-        content = content_from_data_and_mime_type(content_response.body, mime_type)
+        content = content_from_data_and_mime_type(bytes(content_response.body), mime_type)
 
         chunks = make_overlapped_chunks(
             file_id,  # Use file_id as document_id for stability

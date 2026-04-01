@@ -33,15 +33,15 @@ async def get_dataframe_from_uri(uri: str):
         df = await asyncio.to_thread(pandas.read_excel, uri)
     elif uri.startswith("data:"):
         parts = parse_data_url(uri)
-        data = parts["data"]
+        data_str = str(parts["data"])
         if parts["is_base64"]:
-            data = base64.b64decode(data)
+            data = base64.b64decode(data_str)
         else:
-            data = unquote(data)
-            encoding = parts["encoding"] or "utf-8"
-            data = data.encode(encoding)
+            data_str = unquote(data_str)
+            encoding = str(parts["encoding"] or "utf-8")
+            data = data_str.encode(encoding)
 
-        mime_type = parts["mimetype"]
+        mime_type = str(parts["mimetype"])
         mime_category = mime_type.split("/")[0]
         data_bytes = io.BytesIO(data)
 

@@ -38,12 +38,12 @@ def interleaved_content_as_str(
     if content is None:
         return ""
 
-    def _process(c) -> str:
+    def _process(c: Any) -> str:
         if isinstance(c, str):
             return c
-        elif isinstance(c, TextContentItem) or isinstance(c, OpenAIChatCompletionContentPartTextParam):
+        elif isinstance(c, (TextContentItem, OpenAIChatCompletionContentPartTextParam)):
             return c.text
-        elif isinstance(c, ImageContentItem) or isinstance(c, OpenAIChatCompletionContentPartImageParam):
+        elif isinstance(c, (ImageContentItem, OpenAIChatCompletionContentPartImageParam)):
             return "<image>"
         elif isinstance(c, OpenAIFile):
             return "<file>"
