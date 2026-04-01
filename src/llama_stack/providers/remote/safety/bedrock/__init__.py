@@ -10,7 +10,7 @@ from typing import Any
 from .config import BedrockSafetyConfig
 
 
-async def get_adapter_impl(config: BedrockSafetyConfig, _deps) -> Any:
+async def get_adapter_impl(config: BedrockSafetyConfig, _deps: dict[str, Any]) -> Any:
     from .bedrock import BedrockSafetyAdapter
 
     impl = BedrockSafetyAdapter(config)

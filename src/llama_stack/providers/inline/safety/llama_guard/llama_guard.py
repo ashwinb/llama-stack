@@ -7,6 +7,7 @@
 import re
 import uuid
 from string import Template
+from typing import Any, cast
 
 from llama_stack.core.datatypes import Api
 from llama_stack.log import get_logger
@@ -19,7 +20,11 @@ from llama_stack_api import (
     Inference,
     ModerationObject,
     ModerationObjectResults,
+    OpenAIChatCompletion,
+    OpenAIChatCompletionContentPartImageParam,
+    OpenAIChatCompletionContentPartTextParam,
     OpenAIChatCompletionRequestWithExtraBody,
+    OpenAIFile,
     OpenAIMessageParam,
     OpenAIUserMessageParam,
     RunModerationRequest,
@@ -143,7 +148,9 @@ logger = get_logger(name=__name__, category="safety")
 class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
     """Safety provider implementation using Llama Guard models for content moderation."""
 
-    def __init__(self, config: LlamaGuardConfig, deps) -> None:
+    inference_api: Inference  # runtime-injected via deps
+
+    def __init__(self, config: LlamaGuardConfig, deps: dict[Api, Any]) -> None:
         self.config = config
         self.inference_api = deps[Api.inference]
 
@@ -172,7 +179,14 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
         # some shields like llama-guard require the first message to be a user message
         # since this might be a tool call, first role might not be user
         if len(messages) > 0 and messages[0].role != "user":
-            messages[0] = OpenAIUserMessageParam(content=messages[0].content)
+            first_content = messages[0].content
+            # Content may be str, list of content parts, or None; cast to satisfy
+            # OpenAIUserMessageParam which expects the full union type
+            user_content = cast(
+                "str | list[OpenAIChatCompletionContentPartTextParam | OpenAIChatCompletionContentPartImageParam | OpenAIFile]",
+                first_content if first_content is not None else "",
+            )
+            messages[0] = OpenAIUserMessageParam(content=user_content)
 
         # Use the inference API's model resolution instead of hardcoded mappings
         # This allows the shield to work with any registered model
@@ -187,6 +201,9 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
         else:
             # For unknown models, use default Llama Guard 3 8B categories
             safety_categories = DEFAULT_LG_V3_SAFETY_CATEGORIES + [CAT_CODE_INTERPRETER_ABUSE]
+
+        if not model_id:
+            raise ValueError("Shield must have a provider_resource_id")
 
         impl = LlamaGuardShield(
             model=model_id,
@@ -207,7 +224,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             messages = [request.input]
 
         # convert to user messages format with role
-        messages = [OpenAIUserMessageParam(content=m) for m in messages]
+        oai_messages: list[OpenAIMessageParam] = [OpenAIUserMessageParam(content=m) for m in messages]
 
         # Determine safety categories based on the model type
         # For known Llama Guard models, use specific categories
@@ -226,7 +243,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             safety_categories=safety_categories,
         )
 
-        return await impl.run_moderation(messages)
+        return await impl.run_moderation(oai_messages)
 
 
 class LlamaGuardShield:
@@ -307,7 +324,8 @@ class LlamaGuardShield:
             temperature=0.0,  # default is 1, which is too high for safety
         )
         response = await self.inference_api.openai_chat_completion(params)
-        content = response.choices[0].message.content
+        assert isinstance(response, OpenAIChatCompletion)
+        content = response.choices[0].message.content or ""
         content = content.strip()
         return self.get_shield_response(content)
 
@@ -395,7 +413,8 @@ class LlamaGuardShield:
             temperature=0.0,  # default is 1, which is too high for safety
         )
         response = await self.inference_api.openai_chat_completion(params)
-        content = response.choices[0].message.content
+        assert isinstance(response, OpenAIChatCompletion)
+        content = response.choices[0].message.content or ""
         content = content.strip()
         return self.get_moderation_object(content)
 

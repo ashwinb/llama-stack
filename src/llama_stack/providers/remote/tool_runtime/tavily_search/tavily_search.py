@@ -29,7 +29,7 @@ class TavilySearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsR
     def __init__(self, config: TavilySearchToolConfig):
         self.config = config
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         pass
 
     async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
@@ -87,5 +87,5 @@ class TavilySearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsR
 
         return ToolInvocationResult(content=json.dumps(self._clean_tavily_response(response.json())))
 
-    def _clean_tavily_response(self, search_response, top_k=3):
+    def _clean_tavily_response(self, search_response: dict[str, Any], top_k: int = 3) -> dict[str, Any]:
         return {"query": search_response["query"], "top_k": search_response["results"]}

@@ -4,10 +4,12 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
+from typing import Any
+
 from .config import MCPProviderConfig
 
 
-async def get_adapter_impl(config: MCPProviderConfig, _deps):
+async def get_adapter_impl(config: MCPProviderConfig, _deps: dict[str, Any]) -> Any:
     from .model_context_protocol import ModelContextProtocolToolRuntimeImpl
 
     impl = ModelContextProtocolToolRuntimeImpl(config, _deps)
