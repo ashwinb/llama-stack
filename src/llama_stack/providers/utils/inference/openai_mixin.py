@@ -386,7 +386,12 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             async def _localize_image_url(m: OpenAIMessageParam) -> OpenAIMessageParam:
                 if isinstance(m.content, list):
                     for c in m.content:
-                        if isinstance(c, OpenAIChatCompletionContentPartImageParam) and c.image_url and c.image_url.url and "http" in c.image_url.url:
+                        if (
+                            isinstance(c, OpenAIChatCompletionContentPartImageParam)
+                            and c.image_url
+                            and c.image_url.url
+                            and "http" in c.image_url.url
+                        ):
                             localize_result = await localize_image_content(c.image_url.url)
                             if localize_result is None:
                                 raise ValueError(
