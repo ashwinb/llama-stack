@@ -8,12 +8,12 @@ import asyncio
 import base64
 import platform
 import struct
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from llama_stack.log import get_logger
 
 if TYPE_CHECKING:
-    from sentence_transformers import SentenceTransformer
+    from sentence_transformers import SentenceTransformer  # ty: ignore[unresolved-import]
 
 from llama_stack_api import (
     ModelStore,
@@ -37,6 +37,7 @@ class SentenceTransformerEmbeddingMixin:
     """Mixin providing OpenAI-compatible embeddings via sentence-transformers models."""
 
     model_store: ModelStore
+    config: Any
 
     async def openai_embeddings(
         self,
@@ -98,8 +99,8 @@ class SentenceTransformerEmbeddingMixin:
             log.info(f"Loading sentence transformer for {model}...")
 
             def _load_model():
-                import torch
-                from sentence_transformers import SentenceTransformer
+                import torch  # ty: ignore[unresolved-import]
+                from sentence_transformers import SentenceTransformer  # ty: ignore[unresolved-import]
 
                 platform_name = platform.system()
                 if platform_name == DARWIN:
