@@ -9,7 +9,7 @@ from typing import Any
 from .config import LlamaGuardConfig
 
 
-async def get_provider_impl(config: LlamaGuardConfig, deps: dict[str, Any]):
+async def get_provider_impl(config: LlamaGuardConfig, deps: dict[str, Any]) -> Any:
     from .llama_guard import LlamaGuardSafetyImpl
 
     assert isinstance(config, LlamaGuardConfig), f"Unexpected config type: {type(config)}"

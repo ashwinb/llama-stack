@@ -8,7 +8,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from codeshield.cs import CodeShieldScanResult
+    from codeshield.cs import CodeShieldScanResult  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 from llama_stack.providers.utils.inference.prompt_adapter import (
@@ -60,7 +60,7 @@ class BuiltinCodeScannerSafetyImpl(Safety):
         if not shield:
             raise ValueError(f"Shield {request.shield_id} not found")
 
-        from codeshield.cs import CodeShield
+        from codeshield.cs import CodeShield  # ty: ignore[unresolved-import]
 
         text = "\n".join([interleaved_content_as_str(m.content) for m in request.messages])
         log.info(f"Running CodeScannerShield on {text[50:]}")
@@ -108,7 +108,7 @@ class BuiltinCodeScannerSafetyImpl(Safety):
         inputs = request.input if isinstance(request.input, list) else [request.input]
         results = []
 
-        from codeshield.cs import CodeShield
+        from codeshield.cs import CodeShield  # ty: ignore[unresolved-import]
 
         for text_input in inputs:
             log.info(f"Running CodeScannerShield moderation on input: {text_input[:100]}...")

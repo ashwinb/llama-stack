@@ -16,7 +16,7 @@ class BraveSearchToolProviderDataValidator(BaseModel):
     brave_search_api_key: SecretStr
 
 
-async def get_adapter_impl(config: BraveSearchToolConfig, _deps):
+async def get_adapter_impl(config: BraveSearchToolConfig, _deps: dict) -> BraveSearchToolRuntimeImpl:
     impl = BraveSearchToolRuntimeImpl(config)
     await impl.initialize()
     return impl

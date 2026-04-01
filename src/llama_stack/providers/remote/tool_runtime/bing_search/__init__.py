@@ -15,7 +15,7 @@ class BingSearchToolProviderDataValidator(BaseModel):
     bing_search_api_key: SecretStr
 
 
-async def get_adapter_impl(config: BingSearchToolConfig, _deps):
+async def get_adapter_impl(config: BingSearchToolConfig, _deps: dict) -> BingSearchToolRuntimeImpl:
     impl = BingSearchToolRuntimeImpl(config)
     await impl.initialize()
     return impl

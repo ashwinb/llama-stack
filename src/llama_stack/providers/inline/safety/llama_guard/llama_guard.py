@@ -172,11 +172,16 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
         # some shields like llama-guard require the first message to be a user message
         # since this might be a tool call, first role might not be user
         if len(messages) > 0 and messages[0].role != "user":
-            messages[0] = OpenAIUserMessageParam(content=messages[0].content)
+            content = messages[0].content
+            if content is None:
+                content = ""
+            messages[0] = OpenAIUserMessageParam(content=content)  # ty: ignore[invalid-argument-type]
 
         # Use the inference API's model resolution instead of hardcoded mappings
         # This allows the shield to work with any registered model
         model_id = shield.provider_resource_id
+        if not model_id:
+            raise ValueError(f"Shield {request.shield_id} has no provider_resource_id")
 
         # Determine safety categories based on the model type
         # For known Llama Guard models, use specific categories
@@ -207,7 +212,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             messages = [request.input]
 
         # convert to user messages format with role
-        messages = [OpenAIUserMessageParam(content=m) for m in messages]
+        openai_messages: list[OpenAIMessageParam] = [OpenAIUserMessageParam(content=m) for m in messages]
 
         # Determine safety categories based on the model type
         # For known Llama Guard models, use specific categories
@@ -226,7 +231,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             safety_categories=safety_categories,
         )
 
-        return await impl.run_moderation(messages)
+        return await impl.run_moderation(openai_messages)
 
 
 class LlamaGuardShield:
@@ -307,7 +312,9 @@ class LlamaGuardShield:
             temperature=0.0,  # default is 1, which is too high for safety
         )
         response = await self.inference_api.openai_chat_completion(params)
-        content = response.choices[0].message.content
+        content = response.choices[0].message.content  # ty: ignore[unresolved-attribute]
+        if content is None:
+            content = ""
         content = content.strip()
         return self.get_shield_response(content)
 
@@ -395,7 +402,9 @@ class LlamaGuardShield:
             temperature=0.0,  # default is 1, which is too high for safety
         )
         response = await self.inference_api.openai_chat_completion(params)
-        content = response.choices[0].message.content
+        content = response.choices[0].message.content  # ty: ignore[unresolved-attribute]
+        if content is None:
+            content = ""
         content = content.strip()
         return self.get_moderation_object(content)
 
