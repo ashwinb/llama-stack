@@ -17,10 +17,10 @@ from termcolor import cprint
 
 from llama_stack_api import RemoteProviderConfig
 
-_CLIENT_CLASSES = {}
+_CLIENT_CLASSES: dict[type, type] = {}
 
 
-async def get_client_impl(protocol, config: RemoteProviderConfig, _deps: Any):
+async def get_client_impl(protocol: type, config: RemoteProviderConfig, _deps: Any) -> Any:
     """Create and initialize an API client for a remote provider.
 
     Args:
@@ -37,7 +37,7 @@ async def get_client_impl(protocol, config: RemoteProviderConfig, _deps: Any):
     return impl
 
 
-def create_api_client_class(protocol) -> type:
+def create_api_client_class(protocol: type) -> type:
     """Dynamically create an API client class for the given protocol.
 
     Args:
@@ -203,7 +203,7 @@ def create_api_client_class(protocol) -> type:
     return APIClient
 
 
-def extract_non_async_iterator_type(type_hint):
+def extract_non_async_iterator_type(type_hint: Any) -> Any:
     """Extract the non-AsyncIterator type from a Union type hint.
 
     Args:
@@ -220,7 +220,7 @@ def extract_non_async_iterator_type(type_hint):
     return type_hint
 
 
-def extract_async_iterator_type(type_hint):
+def extract_async_iterator_type(type_hint: Any) -> Any:
     """Extract the inner type from an AsyncIterator within a Union type hint.
 
     Args:
