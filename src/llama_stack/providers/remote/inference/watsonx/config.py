@@ -27,7 +27,7 @@ class WatsonXProviderDataValidator(BaseModel):
 class WatsonXConfig(RemoteInferenceProviderConfig):
     """Configuration for the IBM WatsonX inference provider."""
 
-    base_url: HttpUrl | None = Field(
+    base_url: HttpUrl | None = Field(  # ty: ignore[invalid-assignment]  # Pydantic Field descriptor
         default_factory=lambda: os.getenv("WATSONX_BASE_URL", "https://us-south.ml.cloud.ibm.com"),
         description="A base url for accessing the watsonx.ai",
     )
