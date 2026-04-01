@@ -31,7 +31,7 @@ class ModelContextProtocolToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime
     def __init__(self, config: MCPProviderConfig, _deps: dict[Api, Any]):
         self.config = config
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         pass
 
     async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
@@ -58,10 +58,12 @@ class ModelContextProtocolToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime
     async def invoke_tool(
         self, tool_name: str, kwargs: dict[str, Any], authorization: str | None = None
     ) -> ToolInvocationResult:
+        if self.tool_store is None:
+            raise ValueError("tool_store is not initialized")
         tool = await self.tool_store.get_tool(tool_name)
         if tool.metadata is None or tool.metadata.get("endpoint") is None:
             raise ValueError(f"Tool {tool_name} does not have metadata")
-        endpoint = tool.metadata.get("endpoint")
+        endpoint: str = tool.metadata["endpoint"]
         if urlparse(endpoint).scheme not in ("http", "https"):
             raise ValueError(f"Endpoint {endpoint} is not a valid HTTP(S) URL")
 

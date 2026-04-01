@@ -100,7 +100,7 @@ class NeMoGuardrails:
         self.threshold = threshold
         self.guardrails_service_url = config.guardrails_service_url
 
-    async def _guardrails_post(self, path: str, data: Any | None):
+    async def _guardrails_post(self, path: str, data: Any | None) -> Any:
         """Helper for making POST requests to the guardrails service."""
         headers = {
             "Accept": "application/json",
