@@ -7,14 +7,12 @@
 import asyncio
 import time
 from collections.abc import AsyncIterator
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import Body
 from openai.types.chat import ChatCompletionToolChoiceOptionParam as OpenAIChatCompletionToolChoiceOptionParam
 from openai.types.chat import ChatCompletionToolParam as OpenAIChatCompletionToolParam
 from pydantic import TypeAdapter
-
-from typing import cast
 
 from llama_stack.core.access_control.access_control import is_action_allowed
 from llama_stack.core.access_control.conditions import ProtectedResource

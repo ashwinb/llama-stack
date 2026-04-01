@@ -286,7 +286,9 @@ class CommonRoutingTableImpl(RoutingTable):
         # Apply attribute-based access control filtering
         if filtered_objs:
             filtered_objs = [
-                obj for obj in filtered_objs if is_action_allowed(self.policy, Action.READ, cast(ProtectedResource, obj), get_authenticated_user())
+                obj
+                for obj in filtered_objs
+                if is_action_allowed(self.policy, Action.READ, cast(ProtectedResource, obj), get_authenticated_user())
             ]
 
         return filtered_objs
