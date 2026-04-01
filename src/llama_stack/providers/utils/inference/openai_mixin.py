@@ -32,6 +32,7 @@ from llama_stack_api import (
     ModelType,
     OpenAIChatCompletion,
     OpenAIChatCompletionChunk,
+    OpenAIChatCompletionContentPartImageParam,
     OpenAIChatCompletionRequestWithExtraBody,
     OpenAICompletion,
     OpenAICompletionRequestWithExtraBody,
@@ -73,6 +74,13 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
     # Allow extra fields so the routing infra can inject model_store, __provider_id__, etc.
     # Allow arbitrary types for shared_ssl_context
     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
+
+    # Runtime-injected by the routing table (p.__provider_id__ = provider_id)
+    __provider_id__: str = ""
+
+    # Runtime-injected by the routing table (p.model_store = self)
+    # Using Any to avoid circular imports with core/routing_tables/
+    model_store: Any = None
 
     config: RemoteInferenceProviderConfig
 
@@ -379,7 +387,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             async def _localize_image_url(m: OpenAIMessageParam) -> OpenAIMessageParam:
                 if isinstance(m.content, list):
                     for c in m.content:
-                        if c.type == "image_url" and c.image_url and c.image_url.url and "http" in c.image_url.url:
+                        if isinstance(c, OpenAIChatCompletionContentPartImageParam) and c.image_url and c.image_url.url and "http" in c.image_url.url:
                             localize_result = await localize_image_content(c.image_url.url)
                             if localize_result is None:
                                 raise ValueError(
