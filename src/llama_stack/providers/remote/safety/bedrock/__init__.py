@@ -7,12 +7,11 @@
 
 from typing import Any
 
+from .bedrock import BedrockSafetyAdapter
 from .config import BedrockSafetyConfig
 
 
-async def get_adapter_impl(config: BedrockSafetyConfig, _deps) -> Any:
-    from .bedrock import BedrockSafetyAdapter
-
+async def get_adapter_impl(config: BedrockSafetyConfig, _deps: dict[str, Any]) -> BedrockSafetyAdapter:
     impl = BedrockSafetyAdapter(config)
     await impl.initialize()
     return impl

@@ -8,11 +8,10 @@
 from typing import Any
 
 from .config import SambaNovaSafetyConfig
+from .sambanova import SambaNovaSafetyAdapter
 
 
-async def get_adapter_impl(config: SambaNovaSafetyConfig, _deps) -> Any:
-    from .sambanova import SambaNovaSafetyAdapter
-
+async def get_adapter_impl(config: SambaNovaSafetyConfig, _deps: dict[str, Any]) -> SambaNovaSafetyAdapter:
     impl = SambaNovaSafetyAdapter(config)
     await impl.initialize()
     return impl

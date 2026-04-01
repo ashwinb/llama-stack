@@ -7,6 +7,7 @@
 import re
 import uuid
 from string import Template
+from typing import Any
 
 from llama_stack.core.datatypes import Api
 from llama_stack.log import get_logger
@@ -19,6 +20,7 @@ from llama_stack_api import (
     Inference,
     ModerationObject,
     ModerationObjectResults,
+    OpenAIChatCompletion,
     OpenAIChatCompletionRequestWithExtraBody,
     OpenAIMessageParam,
     OpenAIUserMessageParam,
@@ -143,9 +145,9 @@ logger = get_logger(name=__name__, category="safety")
 class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
     """Safety provider implementation using Llama Guard models for content moderation."""
 
-    def __init__(self, config: LlamaGuardConfig, deps) -> None:
+    def __init__(self, config: LlamaGuardConfig, deps: dict[Api, Any]) -> None:
         self.config = config
-        self.inference_api = deps[Api.inference]
+        self.inference_api: Inference = deps[Api.inference]
 
     async def initialize(self) -> None:
         pass
@@ -172,7 +174,13 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
         # some shields like llama-guard require the first message to be a user message
         # since this might be a tool call, first role might not be user
         if len(messages) > 0 and messages[0].role != "user":
-            messages[0] = OpenAIUserMessageParam(content=messages[0].content)
+            raw_content = messages[0].content
+            if isinstance(raw_content, str):
+                messages[0] = OpenAIUserMessageParam(content=raw_content)
+            elif isinstance(raw_content, list):
+                messages[0] = OpenAIUserMessageParam(content=raw_content)  # ty: ignore[invalid-argument-type]
+            else:
+                messages[0] = OpenAIUserMessageParam(content=str(raw_content) if raw_content is not None else "")
 
         # Use the inference API's model resolution instead of hardcoded mappings
         # This allows the shield to work with any registered model
@@ -188,6 +196,8 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             # For unknown models, use default Llama Guard 3 8B categories
             safety_categories = DEFAULT_LG_V3_SAFETY_CATEGORIES + [CAT_CODE_INTERPRETER_ABUSE]
 
+        if not model_id:
+            raise ValueError("Shield must have a provider_resource_id")
         impl = LlamaGuardShield(
             model=model_id,
             inference_api=self.inference_api,
@@ -207,7 +217,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             messages = [request.input]
 
         # convert to user messages format with role
-        messages = [OpenAIUserMessageParam(content=m) for m in messages]
+        oai_messages: list[OpenAIMessageParam] = [OpenAIUserMessageParam(content=m) for m in messages]
 
         # Determine safety categories based on the model type
         # For known Llama Guard models, use specific categories
@@ -226,7 +236,7 @@ class LlamaGuardSafetyImpl(Safety, ShieldsProtocolPrivate):
             safety_categories=safety_categories,
         )
 
-        return await impl.run_moderation(messages)
+        return await impl.run_moderation(oai_messages)
 
 
 class LlamaGuardShield:
@@ -307,7 +317,8 @@ class LlamaGuardShield:
             temperature=0.0,  # default is 1, which is too high for safety
         )
         response = await self.inference_api.openai_chat_completion(params)
-        content = response.choices[0].message.content
+        assert isinstance(response, OpenAIChatCompletion)
+        content = response.choices[0].message.content or ""
         content = content.strip()
         return self.get_shield_response(content)
 
@@ -395,7 +406,8 @@ class LlamaGuardShield:
             temperature=0.0,  # default is 1, which is too high for safety
         )
         response = await self.inference_api.openai_chat_completion(params)
-        content = response.choices[0].message.content
+        assert isinstance(response, OpenAIChatCompletion)
+        content = response.choices[0].message.content or ""
         content = content.strip()
         return self.get_moderation_object(content)
 

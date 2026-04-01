@@ -8,11 +8,10 @@
 from typing import Any
 
 from .config import NVIDIASafetyConfig
+from .nvidia import NVIDIASafetyAdapter
 
 
-async def get_adapter_impl(config: NVIDIASafetyConfig, _deps) -> Any:
-    from .nvidia import NVIDIASafetyAdapter
-
+async def get_adapter_impl(config: NVIDIASafetyConfig, _deps: dict[str, Any]) -> NVIDIASafetyAdapter:
     impl = NVIDIASafetyAdapter(config)
     await impl.initialize()
     return impl
