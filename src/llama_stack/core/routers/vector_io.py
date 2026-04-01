@@ -7,7 +7,7 @@
 import asyncio
 import time
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Body
 
@@ -74,7 +74,7 @@ class VectorIORouter(VectorIO):
         vector_stores_config: VectorStoresConfig | None = None,
         inference_api: Inference | None = None,
     ) -> None:
-        self.routing_table = routing_table
+        self.routing_table: Any = routing_table
         self.vector_stores_config = vector_stores_config
         self.inference_api = inference_api
 
@@ -138,7 +138,7 @@ class VectorIORouter(VectorIO):
 
         try:
             response = await self.inference_api.openai_chat_completion(request)
-            content = response.choices[0].message.content
+            content = response.choices[0].message.content  # ty: ignore[unresolved-attribute]
             if content is None:
                 logger.error("LLM returned None content for query rewriting. Model", model_id=model_id)
                 raise RuntimeError("Query rewrite failed due to an internal error")
@@ -407,7 +407,7 @@ class VectorIORouter(VectorIO):
         limited_stores = all_stores[:limit]
 
         # Determine pagination info
-        has_more = len(all_stores) > limit
+        has_more = len(all_stores) > (limit or 20)
         first_id = limited_stores[0].id if limited_stores else None
         last_id = limited_stores[-1].id if limited_stores else None
 

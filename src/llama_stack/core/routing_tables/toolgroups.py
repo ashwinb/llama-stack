@@ -4,9 +4,9 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import Any
+from typing import Any, cast
 
-from llama_stack.core.datatypes import AuthenticationRequiredError, ToolGroupWithOwner
+from llama_stack.core.datatypes import AuthenticationRequiredError, RoutableObjectWithProvider, ToolGroupWithOwner
 from llama_stack.log import get_logger
 from llama_stack_api import (
     URL,
@@ -67,7 +67,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
                 toolgroup_id = group_id
             toolgroups = [await self.get_tool_group(toolgroup_id)]
         else:
-            toolgroups = await self.get_all_with_type("tool_group")
+            toolgroups = cast(list[ToolGroup], await self.get_all_with_type("tool_group"))
 
         all_tools = []
         for toolgroup in toolgroups:
@@ -82,7 +82,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
                     # Other errors that the client cannot fix are logged and
                     # those specific toolgroups are skipped.
                     logger.warning("Error listing tools for toolgroup", identifier=toolgroup.identifier, error=str(e))
-                    logger.debug(e, exc_info=True)
+                    logger.debug(str(e), exc_info=True)
                     continue
             all_tools.extend(self.toolgroups_to_tools[toolgroup.identifier])
 
@@ -103,13 +103,13 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
             self.tool_to_toolgroup[tool.name] = toolgroup.identifier
 
     async def list_tool_groups(self) -> ListToolGroupsResponse:
-        return ListToolGroupsResponse(data=await self.get_all_with_type("tool_group"))
+        return ListToolGroupsResponse(data=cast(list[ToolGroup], await self.get_all_with_type("tool_group")))
 
     async def get_tool_group(self, toolgroup_id: str) -> ToolGroup:
         tool_group = await self.get_object_by_identifier("tool_group", toolgroup_id)
         if tool_group is None:
             raise ToolGroupNotFoundError(toolgroup_id)
-        return tool_group
+        return cast(ToolGroup, tool_group)
 
     async def get_tool(self, tool_name: str) -> ToolDef:
         if tool_name in self.tool_to_toolgroup:
@@ -143,7 +143,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
             await self._index_tools(toolgroup)
 
     async def unregister_toolgroup(self, toolgroup_id: str) -> None:
-        await self.unregister_object(await self.get_tool_group(toolgroup_id))
+        await self.unregister_object(cast(RoutableObjectWithProvider, await self.get_tool_group(toolgroup_id)))
 
     async def shutdown(self) -> None:
         pass

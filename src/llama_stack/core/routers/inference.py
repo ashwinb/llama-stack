@@ -14,7 +14,11 @@ from openai.types.chat import ChatCompletionToolChoiceOptionParam as OpenAIChatC
 from openai.types.chat import ChatCompletionToolParam as OpenAIChatCompletionToolParam
 from pydantic import TypeAdapter
 
+from typing import cast
+
 from llama_stack.core.access_control.access_control import is_action_allowed
+from llama_stack.core.access_control.conditions import ProtectedResource
+from llama_stack.core.access_control.datatypes import Action
 from llama_stack.core.datatypes import ModelWithOwner
 from llama_stack.core.request_headers import get_authenticated_user
 from llama_stack.log import get_logger
@@ -63,7 +67,7 @@ class InferenceRouter(Inference):
         store: InferenceStore | None = None,
     ) -> None:
         logger.debug("Initializing InferenceRouter")
-        self.routing_table = routing_table
+        self.routing_table: Any = routing_table
         self.store = store
 
     async def initialize(self) -> None:
@@ -134,13 +138,13 @@ class InferenceRouter(Inference):
             identifier=model_id,
             provider_id=provider_id,
             provider_resource_id=provider_resource_id,
-            model_type=expected_model_type,
+            model_type=ModelType(expected_model_type),
             metadata={},  # Empty metadata for temporary object
         )
 
         # Perform RBAC check
         user = get_authenticated_user()
-        if not is_action_allowed(self.routing_table.policy, "read", temp_model, user):
+        if not is_action_allowed(self.routing_table.policy, Action.READ, cast(ProtectedResource, temp_model), user):
             logger.debug(
                 "Access denied to model via fallback path for user",
                 model_id=model_id,
@@ -150,7 +154,7 @@ class InferenceRouter(Inference):
 
         return self.routing_table.impls_by_provider_id[provider_id], provider_resource_id
 
-    async def rerank(
+    async def rerank(  # ty: ignore[invalid-method-override]
         self,
         params: RerankRequest,
     ) -> RerankResponse:
@@ -173,9 +177,9 @@ class InferenceRouter(Inference):
         params.model = provider_resource_id
 
         if params.stream:
-            return await provider.openai_completion(params)
+            return await provider.openai_completion(params)  # ty: ignore[invalid-return-type]
 
-        response = await provider.openai_completion(params)
+        response = cast(OpenAICompletion, await provider.openai_completion(params))
         response.model = request_model_id
         return response
 
@@ -215,9 +219,9 @@ class InferenceRouter(Inference):
             # For streaming, the provider returns AsyncIterator[OpenAIChatCompletionChunk]
             # We need to add metrics to each chunk and store the final completion
             return self.stream_tokens_and_compute_metrics_openai_chat(
-                response=response_stream,
+                response=cast(AsyncIterator[OpenAIChatCompletionChunk], response_stream),
                 fully_qualified_model_id=request_model_id,
-                provider_id=provider.__provider_id__,
+                provider_id=provider.__provider_id__,  # ty: ignore[unresolved-attribute]
                 messages=params.messages,
             )
 
@@ -270,7 +274,7 @@ class InferenceRouter(Inference):
     async def _nonstream_openai_chat_completion(
         self, provider: Inference, params: OpenAIChatCompletionRequestWithExtraBody
     ) -> OpenAIChatCompletion:
-        response = await provider.openai_chat_completion(params)
+        response = cast(OpenAIChatCompletion, await provider.openai_chat_completion(params))
         for choice in response.choices:
             # some providers return an empty list for no tool calls in non-streaming responses
             # but the OpenAI API returns None. So, set tool_calls to None if it's empty
@@ -428,7 +432,7 @@ class InferenceRouter(Inference):
                     message = OpenAIChatCompletionResponseMessage(
                         role="assistant",
                         content=content_str if content_str else None,
-                        tool_calls=assembled_tool_calls if assembled_tool_calls else None,
+                        tool_calls=assembled_tool_calls if assembled_tool_calls else None,  # ty: ignore[invalid-argument-type]
                     )
                     logprobs_content = choice_data["logprobs_content_parts"]
                     final_logprobs = OpenAIChoiceLogprobs(content=logprobs_content) if logprobs_content else None
