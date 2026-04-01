@@ -29,6 +29,8 @@ logger = get_logger(name=__name__, category="inference::nvidia")
 class NVIDIAInferenceAdapter(OpenAIMixin):
     """Inference adapter for NVIDIA NIM models and services."""
 
+    __provider_id__: str = ""  # injected at runtime by the routing table
+
     config: NVIDIAConfig
 
     provider_data_api_key_field: str = "nvidia_api_key"
@@ -54,7 +56,7 @@ class NVIDIAInferenceAdapter(OpenAIMixin):
                     "API key is required for hosted NVIDIA NIM. Either provide an API key or use a self-hosted NIM."
                 )
 
-    def get_api_key(self) -> str:
+    def get_api_key(self) -> str | None:
         """
         Get the API key for OpenAI mixin.
 
@@ -96,7 +98,7 @@ class NVIDIAInferenceAdapter(OpenAIMixin):
         """
         if identifier in self.config.rerank_model_to_url:
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.rerank,
