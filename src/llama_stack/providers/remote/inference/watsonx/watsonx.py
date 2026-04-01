@@ -35,6 +35,8 @@ WATSONX_API_VERSION = "2023-10-25"
 class WatsonXInferenceAdapter(OpenAIMixin):
     """Inference adapter for IBM WatsonX AI platform."""
 
+    config: WatsonXConfig
+
     _model_cache: dict[str, Model] = {}
 
     provider_data_api_key_field: str = "watsonx_api_key"
@@ -42,7 +44,7 @@ class WatsonXInferenceAdapter(OpenAIMixin):
     # WatsonX does not support stream_options
     supports_stream_options: bool = False
 
-    def __init__(self, config: WatsonXConfig):
+    def __init__(self, config: WatsonXConfig) -> None:
         super().__init__(config=config)
         self._iam_token_cache: dict[str, tuple[str, float]] = {}
         self._model_specs_cache: list[dict[str, Any]] | None = None
@@ -163,7 +165,7 @@ class WatsonXInferenceAdapter(OpenAIMixin):
                 break
 
         return Model(
-            provider_id=self.__provider_id__,
+            provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # injected at runtime
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=model_type,

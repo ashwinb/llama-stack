@@ -78,7 +78,7 @@ class OCIInferenceAdapter(OpenAIMixin):
             return oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
         return None
 
-    def _get_oci_config(self) -> dict:
+    def _get_oci_config(self) -> dict[str, Any]:
         if self.config.oci_auth_type == OCI_AUTH_TYPE_INSTANCE_PRINCIPAL:
             config = {"region": self.config.oci_region}
         elif self.config.oci_auth_type == OCI_AUTH_TYPE_CONFIG_FILE:
@@ -152,13 +152,13 @@ class OCIInferenceAdapter(OpenAIMixin):
         """
         if identifier in self.embedding_models:
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # injected at runtime
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
             )
         return Model(
-            provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+            provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # injected at runtime
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=ModelType.llm,
