@@ -18,6 +18,7 @@ from llama_stack_api import (
     ToolGroupsProtocolPrivate,
     ToolInvocationResult,
     ToolRuntime,
+    ToolStore,
 )
 
 from .config import MCPProviderConfig
@@ -28,10 +29,12 @@ logger = get_logger(__name__, category="tools")
 class ModelContextProtocolToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsRequestProviderData):
     """Tool runtime for discovering and invoking tools via the Model Context Protocol."""
 
-    def __init__(self, config: MCPProviderConfig, _deps: dict[Api, Any]):
+    tool_store: ToolStore  # runtime-injected by routing table
+
+    def __init__(self, config: MCPProviderConfig, _deps: dict[str, Any]) -> None:
         self.config = config
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         pass
 
     async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
@@ -61,7 +64,7 @@ class ModelContextProtocolToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime
         tool = await self.tool_store.get_tool(tool_name)
         if tool.metadata is None or tool.metadata.get("endpoint") is None:
             raise ValueError(f"Tool {tool_name} does not have metadata")
-        endpoint = tool.metadata.get("endpoint")
+        endpoint: str = tool.metadata["endpoint"]
         if urlparse(endpoint).scheme not in ("http", "https"):
             raise ValueError(f"Endpoint {endpoint} is not a valid HTTP(S) URL")
 

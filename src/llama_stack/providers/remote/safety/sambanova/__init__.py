@@ -10,7 +10,7 @@ from typing import Any
 from .config import SambaNovaSafetyConfig
 
 
-async def get_adapter_impl(config: SambaNovaSafetyConfig, _deps) -> Any:
+async def get_adapter_impl(config: SambaNovaSafetyConfig, _deps: dict[str, Any]) -> Any:
     from .sambanova import SambaNovaSafetyAdapter
 
     impl = SambaNovaSafetyAdapter(config)

@@ -43,16 +43,17 @@ class BedrockSafetyAdapter(ShieldToModerationMixin, Safety, ShieldsProtocolPriva
         pass
 
     async def register_shield(self, shield: Shield) -> None:
+        params = shield.params or {}
         response = self.bedrock_client.list_guardrails(
             guardrailIdentifier=shield.provider_resource_id,
         )
         if (
             not response["guardrails"]
             or len(response["guardrails"]) == 0
-            or response["guardrails"][0]["version"] != shield.params["guardrailVersion"]
+            or response["guardrails"][0]["version"] != params["guardrailVersion"]
         ):
             raise ValueError(
-                f"Shield {shield.provider_resource_id} with version {shield.params['guardrailVersion']} not found in Bedrock"
+                f"Shield {shield.provider_resource_id} with version {params['guardrailVersion']} not found in Bedrock"
             )
 
     async def unregister_shield(self, identifier: str) -> None:
@@ -63,7 +64,7 @@ class BedrockSafetyAdapter(ShieldToModerationMixin, Safety, ShieldsProtocolPriva
         if not shield:
             raise ValueError(f"Shield {request.shield_id} not found")
 
-        shield_params = shield.params
+        shield_params = shield.params or {}
         logger.debug("run_shield", shield_params=shield_params, messages=request.messages)
 
         content_messages = []

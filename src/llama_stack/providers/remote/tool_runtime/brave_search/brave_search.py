@@ -28,7 +28,7 @@ class BraveSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsRe
     def __init__(self, config: BraveSearchToolConfig):
         self.config = config
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         pass
 
     async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
@@ -97,7 +97,7 @@ class BraveSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsRe
             content=content_items,
         )
 
-    def _clean_brave_response(self, search_response):
+    def _clean_brave_response(self, search_response: dict[str, Any]) -> list[str]:
         clean_response = []
         if "mixed" in search_response:
             mixed_results = search_response["mixed"]
@@ -109,7 +109,7 @@ class BraveSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsRe
 
         return clean_response
 
-    def _clean_result_by_type(self, r_type, results, idx=None):
+    def _clean_result_by_type(self, r_type: str, results: Any, idx: int | None = None) -> str:
         type_cleaners = {
             "web": (
                 ["type", "title", "url", "description", "date", "extra_snippets"],
