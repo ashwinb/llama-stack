@@ -6,7 +6,7 @@
 
 import base64
 import re
-from typing import Any
+from typing import Any, Union
 
 import httpx
 
@@ -22,8 +22,11 @@ from llama_stack_api import (
 log = get_logger(name=__name__, category="providers::utils")
 
 
+ContentItem = Union[str, TextContentItem, ImageContentItem, OpenAIChatCompletionContentPartTextParam, OpenAIChatCompletionContentPartImageParam, OpenAIFile]
+
+
 def interleaved_content_as_str(
-    content: Any,
+    content: str | ContentItem | list[ContentItem] | None,
     sep: str = " ",
 ) -> str:
     """Convert interleaved content items to a single string.
@@ -38,7 +41,7 @@ def interleaved_content_as_str(
     if content is None:
         return ""
 
-    def _process(c) -> str:
+    def _process(c: ContentItem) -> str:
         if isinstance(c, str):
             return c
         elif isinstance(c, TextContentItem) or isinstance(c, OpenAIChatCompletionContentPartTextParam):
