@@ -45,7 +45,7 @@ def configure_single_provider(registry: dict[str, ProviderSpec], provider: Provi
     except Exception:
         existing = None
 
-    cfg = prompt_for_config(config_type, existing)
+    cfg = prompt_for_config(config_type, existing)  # ty: ignore[invalid-argument-type]
     return Provider(
         provider_id=provider.provider_id,
         provider_type=provider.provider_type,

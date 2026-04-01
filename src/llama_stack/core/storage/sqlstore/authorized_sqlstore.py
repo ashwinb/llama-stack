@@ -99,7 +99,7 @@ class AuthorizedSqlStore:
         if not hasattr(self.sql_store, "config"):
             raise ValueError("SqlStore must have a config attribute to be used with AuthorizedSqlStore")
 
-        self.database_type = self.sql_store.config.type.value
+        self.database_type = self.sql_store.config.type.value  # ty: ignore[unresolved-attribute]
         if self.database_type not in [StorageBackendType.SQL_POSTGRES.value, StorageBackendType.SQL_SQLITE.value]:
             raise ValueError(f"Unsupported database type: {self.database_type}")
 
@@ -136,7 +136,7 @@ class AuthorizedSqlStore:
         current_user = get_authenticated_user()
         enhanced_data: Mapping[str, Any] | Sequence[Mapping[str, Any]]
         if isinstance(data, Mapping):
-            enhanced_data = _enhance_item_with_access_control(data, current_user)
+            enhanced_data = _enhance_item_with_access_control(data, current_user)  # ty: ignore[invalid-argument-type]
         else:
             enhanced_data = [_enhance_item_with_access_control(item, current_user) for item in data]
         await self.sql_store.insert(table, enhanced_data)
