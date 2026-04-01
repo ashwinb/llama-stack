@@ -116,7 +116,7 @@ class VLLMInferenceAdapter(OpenAIMixin):
         # vLLM's /v1/models response does not expose a model task/type field, so classify by name.
         if "embed" in identifier.lower():
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
@@ -124,7 +124,7 @@ class VLLMInferenceAdapter(OpenAIMixin):
             )
         if "rerank" in identifier.lower():
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.rerank,
