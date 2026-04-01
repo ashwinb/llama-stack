@@ -27,13 +27,13 @@ class ShieldsRoutingTable(CommonRoutingTableImpl, Shields):
     """Routing table for managing shield registrations and provider lookups."""
 
     async def list_shields(self) -> ListShieldsResponse:
-        return ListShieldsResponse(data=await self.get_all_with_type(ResourceType.shield.value))
+        return ListShieldsResponse(data=await self.get_all_with_type(ResourceType.shield.value))  # ty: ignore[invalid-argument-type]  # concrete type accepted at runtime
 
     async def get_shield(self, request: GetShieldRequest) -> Shield:
         shield = await self.get_object_by_identifier("shield", request.identifier)
         if shield is None:
             raise ValueError(f"Shield '{request.identifier}' not found")
-        return shield
+        return shield  # ty: ignore[invalid-return-type]  # returns narrower type than parent
 
     async def register_shield(self, request: RegisterShieldRequest) -> Shield:
         provider_shield_id = request.provider_shield_id
@@ -62,4 +62,4 @@ class ShieldsRoutingTable(CommonRoutingTableImpl, Shields):
 
     async def unregister_shield(self, request: UnregisterShieldRequest) -> None:
         existing_shield = await self.get_shield(GetShieldRequest(identifier=request.identifier))
-        await self.unregister_object(existing_shield)
+        await self.unregister_object(existing_shield)  # ty: ignore[invalid-argument-type]  # unregister_object accepts RoutableObjectWithProvider

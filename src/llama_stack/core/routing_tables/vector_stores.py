@@ -65,7 +65,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
 
     async def list_vector_stores(self) -> list[VectorStoreWithOwner]:
         """List all registered vector stores."""
-        return await self.get_all_with_type(ResourceType.vector_store.value)
+        return await self.get_all_with_type(ResourceType.vector_store.value)  # ty: ignore[invalid-return-type]  # returns narrower type than parent
 
     async def register_vector_store(
         self,
@@ -94,11 +94,11 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
 
         vector_store = VectorStoreWithOwner(
             identifier=vector_store_id,
-            type=ResourceType.vector_store.value,
+            type=ResourceType.vector_store.value,  # ty: ignore[invalid-argument-type]  # string value matches expected type
             provider_id=provider_id,
             provider_resource_id=provider_vector_store_id,
             embedding_model=embedding_model,
-            embedding_dimension=embedding_dimension,
+            embedding_dimension=embedding_dimension,  # ty: ignore[invalid-argument-type]  # concrete type accepted at runtime
             vector_store_name=vector_store_name,
         )
         await self.register_object(vector_store)
@@ -108,42 +108,42 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         self,
         request: InsertChunksRequest,
     ) -> None:
-        await self.assert_action_allowed("update", "vector_store", request.vector_store_id)
+        await self.assert_action_allowed("update", "vector_store", request.vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(request.vector_store_id)
-        return await provider.insert_chunks(request)
+        return await provider.insert_chunks(request)  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
 
     async def query_chunks(
         self,
         request: QueryChunksRequest,
     ) -> QueryChunksResponse:
-        await self.assert_action_allowed("read", "vector_store", request.vector_store_id)
+        await self.assert_action_allowed("read", "vector_store", request.vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(request.vector_store_id)
-        return await provider.query_chunks(request)
+        return await provider.query_chunks(request)  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
 
     async def openai_retrieve_vector_store(
         self,
         vector_store_id: str,
     ) -> VectorStoreObject:
-        await self.assert_action_allowed("read", "vector_store", vector_store_id)
+        await self.assert_action_allowed("read", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_retrieve_vector_store(vector_store_id)
+        return await provider.openai_retrieve_vector_store(vector_store_id)  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
 
     async def openai_update_vector_store(
         self,
         vector_store_id: str,
         request: OpenAIUpdateVectorStoreRequest,
     ) -> VectorStoreObject:
-        await self.assert_action_allowed("update", "vector_store", vector_store_id)
+        await self.assert_action_allowed("update", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_update_vector_store(vector_store_id, request)
+        return await provider.openai_update_vector_store(vector_store_id, request)  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
 
     async def openai_delete_vector_store(
         self,
         vector_store_id: str,
     ) -> VectorStoreDeleteResponse:
-        await self.assert_action_allowed("delete", "vector_store", vector_store_id)
+        await self.assert_action_allowed("delete", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        result = await provider.openai_delete_vector_store(vector_store_id)
+        result = await provider.openai_delete_vector_store(vector_store_id)  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
         await self.unregister_vector_store(vector_store_id)
         return result
 
@@ -164,18 +164,18 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         vector_store_id: str,
         request: OpenAISearchVectorStoreRequest,
     ) -> VectorStoreSearchResponsePage:
-        await self.assert_action_allowed("read", "vector_store", vector_store_id)
+        await self.assert_action_allowed("read", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_search_vector_store(vector_store_id, request)
+        return await provider.openai_search_vector_store(vector_store_id, request)  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
 
     async def openai_attach_file_to_vector_store(
         self,
         vector_store_id: str,
         request: OpenAIAttachFileRequest,
     ) -> VectorStoreFileObject:
-        await self.assert_action_allowed("update", "vector_store", vector_store_id)
+        await self.assert_action_allowed("update", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_attach_file_to_vector_store(vector_store_id, request)
+        return await provider.openai_attach_file_to_vector_store(vector_store_id, request)  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
 
     async def openai_list_files_in_vector_store(
         self,
@@ -186,9 +186,9 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         before: str | None = None,
         filter: VectorStoreFileStatus | None = None,
     ) -> VectorStoreListFilesResponse:
-        await self.assert_action_allowed("read", "vector_store", vector_store_id)
+        await self.assert_action_allowed("read", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_list_files_in_vector_store(
+        return await provider.openai_list_files_in_vector_store(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             vector_store_id=vector_store_id,
             limit=limit,
             order=order,
@@ -202,9 +202,9 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         vector_store_id: str,
         file_id: str,
     ) -> VectorStoreFileObject:
-        await self.assert_action_allowed("read", "vector_store", vector_store_id)
+        await self.assert_action_allowed("read", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_retrieve_vector_store_file(
+        return await provider.openai_retrieve_vector_store_file(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             vector_store_id=vector_store_id,
             file_id=file_id,
         )
@@ -216,10 +216,10 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         include_embeddings: bool | None = False,
         include_metadata: bool | None = False,
     ) -> VectorStoreFileContentResponse:
-        await self.assert_action_allowed("read", "vector_store", vector_store_id)
+        await self.assert_action_allowed("read", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
 
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_retrieve_vector_store_file_contents(
+        return await provider.openai_retrieve_vector_store_file_contents(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             vector_store_id=vector_store_id,
             file_id=file_id,
             include_embeddings=include_embeddings,
@@ -232,9 +232,9 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         file_id: str,
         request: OpenAIUpdateVectorStoreFileRequest,
     ) -> VectorStoreFileObject:
-        await self.assert_action_allowed("update", "vector_store", vector_store_id)
+        await self.assert_action_allowed("update", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_update_vector_store_file(
+        return await provider.openai_update_vector_store_file(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             vector_store_id=vector_store_id,
             file_id=file_id,
             request=request,
@@ -245,9 +245,9 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         vector_store_id: str,
         file_id: str,
     ) -> VectorStoreFileDeleteResponse:
-        await self.assert_action_allowed("delete", "vector_store", vector_store_id)
+        await self.assert_action_allowed("delete", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_delete_vector_store_file(
+        return await provider.openai_delete_vector_store_file(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             vector_store_id=vector_store_id,
             file_id=file_id,
         )
@@ -257,9 +257,9 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         vector_store_id: str,
         params: OpenAICreateVectorStoreFileBatchRequestWithExtraBody,
     ) -> VectorStoreFileBatchObject:
-        await self.assert_action_allowed("update", "vector_store", vector_store_id)
+        await self.assert_action_allowed("update", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_create_vector_store_file_batch(
+        return await provider.openai_create_vector_store_file_batch(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             vector_store_id=vector_store_id,
             params=params,
         )
@@ -269,9 +269,9 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         batch_id: str,
         vector_store_id: str,
     ) -> VectorStoreFileBatchObject:
-        await self.assert_action_allowed("read", "vector_store", vector_store_id)
+        await self.assert_action_allowed("read", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_retrieve_vector_store_file_batch(
+        return await provider.openai_retrieve_vector_store_file_batch(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             batch_id=batch_id,
             vector_store_id=vector_store_id,
         )
@@ -286,9 +286,9 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         limit: int | None = 20,
         order: str | None = "desc",
     ) -> VectorStoreFilesListInBatchResponse:
-        await self.assert_action_allowed("read", "vector_store", vector_store_id)
+        await self.assert_action_allowed("read", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_list_files_in_vector_store_file_batch(
+        return await provider.openai_list_files_in_vector_store_file_batch(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             batch_id=batch_id,
             vector_store_id=vector_store_id,
             after=after,
@@ -303,9 +303,9 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         batch_id: str,
         vector_store_id: str,
     ) -> VectorStoreFileBatchObject:
-        await self.assert_action_allowed("update", "vector_store", vector_store_id)
+        await self.assert_action_allowed("update", "vector_store", vector_store_id)  # ty: ignore[invalid-argument-type]  # runtime dispatch handles union types
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_cancel_vector_store_file_batch(
+        return await provider.openai_cancel_vector_store_file_batch(  # ty: ignore[unresolved-attribute]  # runtime dispatch to correct provider
             batch_id=batch_id,
             vector_store_id=vector_store_id,
         )

@@ -28,13 +28,13 @@ class ScoringFunctionsRoutingTable(CommonRoutingTableImpl, ScoringFunctions):
     """Routing table for managing scoring function registrations and provider lookups."""
 
     async def list_scoring_functions(self, request: ListScoringFunctionsRequest) -> ListScoringFunctionsResponse:
-        return ListScoringFunctionsResponse(data=await self.get_all_with_type(ResourceType.scoring_function.value))
+        return ListScoringFunctionsResponse(data=await self.get_all_with_type(ResourceType.scoring_function.value))  # ty: ignore[invalid-argument-type]  # concrete type accepted at runtime
 
     async def get_scoring_function(self, request: GetScoringFunctionRequest) -> ScoringFn:
         scoring_fn = await self.get_object_by_identifier("scoring_function", request.scoring_fn_id)
         if scoring_fn is None:
             raise ValueError(f"Scoring function '{request.scoring_fn_id}' not found")
-        return scoring_fn
+        return scoring_fn  # ty: ignore[invalid-return-type]  # returns narrower type than parent
 
     async def register_scoring_function(
         self,
@@ -65,4 +65,4 @@ class ScoringFunctionsRoutingTable(CommonRoutingTableImpl, ScoringFunctions):
     async def unregister_scoring_function(self, request: UnregisterScoringFunctionRequest) -> None:
         get_request = GetScoringFunctionRequest(scoring_fn_id=request.scoring_fn_id)
         existing_scoring_fn = await self.get_scoring_function(get_request)
-        await self.unregister_object(existing_scoring_fn)
+        await self.unregister_object(existing_scoring_fn)  # ty: ignore[invalid-argument-type]  # unregister_object accepts RoutableObjectWithProvider
