@@ -521,11 +521,11 @@ def replace_env_vars(config: Any, path: str = "") -> Any:
                 # is disabled so that we can skip config env variable expansion and avoid validation errors
                 if isinstance(v, dict) and "provider_id" in v:
                     try:
-                        resolved_provider_id = replace_env_vars(v["provider_id"], f"{path}[{i}].provider_id")
+                        resolved_provider_id = replace_env_vars(v["provider_id"], f"{path}[{i}].provider_id")  # ty: ignore[invalid-argument-type] - v is verified as dict with "provider_id" key
                         if resolved_provider_id == "__disabled__":
                             logger.debug(
                                 "Skipping config env variable expansion for disabled provider",
-                                v_get_provider_id=v.get("provider_id", ""),
+                                v_get_provider_id=v.get("provider_id", ""),  # ty: ignore[no-matching-overload] - v is a dict with string keys
                             )
                             continue
                     except EnvVarError:
@@ -539,7 +539,7 @@ def replace_env_vars(config: Any, path: str = "") -> Any:
                     for id_field in RESOURCE_ID_FIELDS:
                         if id_field in v:
                             try:
-                                resolved_id = replace_env_vars(v[id_field], f"{path}[{i}].{id_field}")
+                                resolved_id = replace_env_vars(v[id_field], f"{path}[{i}].{id_field}")  # ty: ignore[invalid-argument-type] - v is verified as dict with id_field key
                                 if resolved_id is None or resolved_id == "":
                                     logger.debug(
                                         "Skipping [] with empty (conditional env var not set)",
@@ -741,7 +741,7 @@ class Stack:
         stores = self.run_config.storage.stores
         if not stores.metadata:
             raise ValueError("storage.stores.metadata must be configured with a kv_* backend")
-        dist_registry, _ = await create_dist_registry(stores.metadata, self.run_config.distro_name)
+        dist_registry, _ = await create_dist_registry(stores.metadata, self.run_config.distro_name)  # ty: ignore[invalid-argument-type] - distro_name is always str after config validation
         policy = self.run_config.server.auth.access_policy if self.run_config.server.auth else []
 
         internal_impls = {}
@@ -790,7 +790,7 @@ class Stack:
         REGISTRY_REFRESH_TASK.add_done_callback(cb)
 
     async def shutdown(self):
-        for impl in self.impls.values():
+        for impl in self.impls.values():  # ty: ignore[unresolved-attribute] - impls is always set before shutdown is called
             impl_name = impl.__class__.__name__
             logger.debug("Shutting down", impl_name=impl_name)
             try:

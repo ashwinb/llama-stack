@@ -12,7 +12,7 @@ from enum import Enum
 class EnumEncoder(json.JSONEncoder):
     """JSON encoder that serializes Enum values and datetime objects."""
 
-    def default(self, obj):
+    def default(self, obj):  # ty: ignore[invalid-method-override] - parameter name differs from base class (obj vs o)
         if isinstance(obj, Enum):
             return obj.value
         elif isinstance(obj, datetime):

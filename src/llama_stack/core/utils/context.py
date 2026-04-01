@@ -40,7 +40,7 @@ def preserve_contexts_async_generator[T](
                 previous_value = _prev.get(context_var, _MISSING)
                 if token is not None:
                     try:
-                        context_var.reset(token)
+                        context_var.reset(token)  # ty: ignore[invalid-argument-type] - token is verified non-None above
                         return
                     except (RuntimeError, ValueError):
                         pass
