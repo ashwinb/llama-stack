@@ -15,7 +15,7 @@ async def get_provider_impl(
     config: BuiltinResponsesImplConfig,
     deps: dict[Api, Any],
     policy: list[AccessRule],
-):
+) -> Any:
     from .impl import BuiltinResponsesImpl
 
     impl = BuiltinResponsesImpl(
