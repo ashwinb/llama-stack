@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 from importlib.metadata import version
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -17,8 +18,6 @@ from llama_stack.core.server.fastapi_router_registry import (
     get_router_routes,
 )
 from llama_stack.core.server.routes import get_all_api_routes
-from typing import Any
-
 from llama_stack_api import (
     Api,
     HealthInfo,

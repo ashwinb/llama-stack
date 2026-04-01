@@ -9,7 +9,6 @@ import os
 import signal
 import subprocess
 import sys
-
 from typing import Any
 
 from termcolor import cprint
