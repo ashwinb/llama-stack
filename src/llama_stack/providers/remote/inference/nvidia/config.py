@@ -7,7 +7,7 @@
 import os
 from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl, SecretStr
+from pydantic import BaseModel, Field, SecretStr
 
 from llama_stack.providers.utils.inference.model_registry import RemoteInferenceProviderConfig
 from llama_stack_api import json_schema_type
@@ -46,7 +46,7 @@ class NVIDIAConfig(RemoteInferenceProviderConfig):
     URL of your running NVIDIA NIM and do not need to set the api_key.
     """
 
-    base_url: HttpUrl | None = Field(
+    base_url: str | None = Field(
         default_factory=lambda: os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
         description="A base url for accessing the NVIDIA NIM",
     )
@@ -66,7 +66,7 @@ class NVIDIAConfig(RemoteInferenceProviderConfig):
     @classmethod
     def sample_run_config(
         cls,
-        base_url: HttpUrl | None = "${env.NVIDIA_BASE_URL:=https://integrate.api.nvidia.com/v1}",
+        base_url: str | None = "${env.NVIDIA_BASE_URL:=https://integrate.api.nvidia.com/v1}",
         api_key: str = "${env.NVIDIA_API_KEY:=}",
         **kwargs,
     ) -> dict[str, Any]:

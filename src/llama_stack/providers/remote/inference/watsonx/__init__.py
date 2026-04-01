@@ -6,12 +6,10 @@
 
 from typing import Any
 
-from llama_stack_api import Inference
-
 from .config import WatsonXConfig
 
 
-async def get_adapter_impl(config: WatsonXConfig, _deps: dict[str, Any]) -> Inference:
+async def get_adapter_impl(config: WatsonXConfig, _deps: dict[str, Any]) -> Any:
     # import dynamically so the import is used only when it is needed
     from .watsonx import WatsonXInferenceAdapter
 

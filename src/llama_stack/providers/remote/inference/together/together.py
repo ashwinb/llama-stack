@@ -8,7 +8,7 @@
 from collections.abc import Iterable
 from typing import Any, cast
 
-from together import AsyncTogether  # type: ignore[import-untyped]
+from together import AsyncTogether  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
 
 from llama_stack.core.request_headers import NeedsRequestProviderData
 from llama_stack.log import get_logger

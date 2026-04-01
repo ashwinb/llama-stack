@@ -24,8 +24,10 @@ class HttpxOciAuth(httpx.Auth):
     OCI API calls.
 
     Attributes:
-        signer (oci.signer.Signer): The OCI signer instance used for request signing
+        signer: The OCI signer instance used for request signing
     """
+
+    signer: Any  # OCI signer instance — subclasses assign concrete signer types
 
     def __init__(self, signer: OciAuthSigner):
         self.signer = signer

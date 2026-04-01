@@ -6,12 +6,10 @@
 
 from typing import Any
 
-from llama_stack_api import Inference
-
 from .config import RunpodImplConfig
 
 
-async def get_adapter_impl(config: RunpodImplConfig, _deps: dict[str, Any]) -> Inference:
+async def get_adapter_impl(config: RunpodImplConfig, _deps: dict[str, Any]) -> Any:
     from .runpod import RunpodInferenceAdapter
 
     assert isinstance(config, RunpodImplConfig), f"Unexpected config type: {type(config)}"

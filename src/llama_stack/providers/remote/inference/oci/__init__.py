@@ -6,12 +6,10 @@
 
 from typing import Any
 
-from llama_stack_api import InferenceProvider
-
 from .config import OCIConfig
 
 
-async def get_adapter_impl(config: OCIConfig, _deps: dict[str, Any]) -> InferenceProvider:
+async def get_adapter_impl(config: OCIConfig, _deps: dict[str, Any]) -> Any:
     from .oci import OCIInferenceAdapter
 
     adapter = OCIInferenceAdapter(config=config)

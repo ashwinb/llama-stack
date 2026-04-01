@@ -182,4 +182,4 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         client = self._get_openai_client()
         request_params = params.model_dump(exclude_none=True)
         response = await client.embeddings.create(**request_params)
-        return response  # type: ignore[return-value]
+        return response  # type: ignore[return-value]  # ty: ignore[invalid-return-type]

@@ -4,6 +4,8 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
+from typing import Any
+
 from pydantic import BaseModel, SecretStr
 
 from .config import TogetherImplConfig
@@ -15,7 +17,7 @@ class TogetherProviderDataValidator(BaseModel):
     together_api_key: SecretStr
 
 
-async def get_adapter_impl(config: TogetherImplConfig, _deps):
+async def get_adapter_impl(config: TogetherImplConfig, _deps: dict) -> Any:
     from .together import TogetherInferenceAdapter
 
     assert isinstance(config, TogetherImplConfig), f"Unexpected config type: {type(config)}"
