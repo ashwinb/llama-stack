@@ -9,10 +9,10 @@ from opentelemetry import trace
 from llama_stack.core.datatypes import SafetyConfig
 from llama_stack.log import get_logger
 from llama_stack.telemetry.helpers import safety_request_span_attributes, safety_span_name
+from llama_stack.core.routing_tables.shields import ShieldsRoutingTable
 from llama_stack_api import (
     ModerationObject,
     RegisterShieldRequest,
-    RoutingTable,
     RunModerationRequest,
     RunShieldRequest,
     RunShieldResponse,
@@ -30,7 +30,7 @@ class SafetyRouter(Safety):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: ShieldsRoutingTable,
         safety_config: SafetyConfig | None = None,
     ) -> None:
         logger.debug("Initializing SafetyRouter")
@@ -57,7 +57,7 @@ class SafetyRouter(Safety):
         with tracer.start_as_current_span(name=safety_span_name(request.shield_id)):
             logger.debug("SafetyRouter.run_shield", shield_id=request.shield_id)
             provider = await self.routing_table.get_provider_impl(request.shield_id)
-            response = await provider.run_shield(request)
+            response = await provider.run_shield(request)  # ty: ignore[unresolved-attribute]  # provider is Safety at runtime
             safety_request_span_attributes(request.shield_id, request.messages, response)
         return response
 
@@ -100,4 +100,4 @@ class SafetyRouter(Safety):
         provider = await self.routing_table.get_provider_impl(shield_id)
 
         provider_request = RunModerationRequest(input=request.input, model=provider_model)
-        return await provider.run_moderation(provider_request)
+        return await provider.run_moderation(provider_request)  # ty: ignore[unresolved-attribute]  # provider is Safety at runtime

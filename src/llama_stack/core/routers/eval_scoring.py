@@ -6,6 +6,8 @@
 from typing import Any
 
 from llama_stack.log import get_logger
+from llama_stack.core.routing_tables.benchmarks import BenchmarksRoutingTable
+from llama_stack.core.routing_tables.scoring_functions import ScoringFunctionsRoutingTable
 from llama_stack_api import (
     BenchmarkConfig,
     Eval,
@@ -15,7 +17,6 @@ from llama_stack_api import (
     JobCancelRequest,
     JobResultRequest,
     JobStatusRequest,
-    RoutingTable,
     RunEvalRequest,
     ScoreBatchRequest,
     ScoreBatchResponse,
@@ -37,7 +38,7 @@ class ScoringRouter(Scoring):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: ScoringFunctionsRoutingTable,
     ) -> None:
         logger.debug("Initializing ScoringRouter")
         self.routing_table = routing_table
@@ -64,7 +65,7 @@ class ScoringRouter(Scoring):
                 scoring_functions={fn_identifier: request.scoring_functions[fn_identifier]},
                 save_results_dataset=request.save_results_dataset,
             )
-            score_response = await provider.score_batch(single_fn_request)
+            score_response = await provider.score_batch(single_fn_request)  # ty: ignore[unresolved-attribute]  # provider is Scoring at runtime
             res.update(score_response.results)
 
         if request.save_results_dataset:
@@ -92,7 +93,7 @@ class ScoringRouter(Scoring):
                 input_rows=request.input_rows,
                 scoring_functions={fn_identifier: request.scoring_functions[fn_identifier]},
             )
-            score_response = await provider.score(single_fn_request)
+            score_response = await provider.score(single_fn_request)  # ty: ignore[unresolved-attribute]  # provider is Scoring at runtime
             res.update(score_response.results)
 
         return ScoreResponse(results=res)
@@ -103,7 +104,7 @@ class EvalRouter(Eval):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: BenchmarksRoutingTable,
     ) -> None:
         logger.debug("Initializing EvalRouter")
         self.routing_table = routing_table
@@ -141,7 +142,7 @@ class EvalRouter(Eval):
         )
         logger.debug("EvalRouter.run_eval", benchmark_id=resolved_request.benchmark_id)
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        return await provider.run_eval(resolved_request)
+        return await provider.run_eval(resolved_request)  # ty: ignore[unresolved-attribute]  # provider is Eval at runtime
 
     async def evaluate_rows(
         self,
@@ -180,7 +181,7 @@ class EvalRouter(Eval):
             input_rows_count=len(resolved_request.input_rows),
         )
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        return await provider.evaluate_rows(resolved_request)
+        return await provider.evaluate_rows(resolved_request)  # ty: ignore[unresolved-attribute]  # provider is Eval at runtime
 
     async def job_status(
         self,
@@ -207,7 +208,7 @@ class EvalRouter(Eval):
             "EvalRouter.job_status", benchmark_id=resolved_request.benchmark_id, job_id=resolved_request.job_id
         )
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        return await provider.job_status(resolved_request)
+        return await provider.job_status(resolved_request)  # ty: ignore[unresolved-attribute]  # provider is Eval at runtime
 
     async def job_cancel(
         self,
@@ -234,7 +235,7 @@ class EvalRouter(Eval):
             "EvalRouter.job_cancel", benchmark_id=resolved_request.benchmark_id, job_id=resolved_request.job_id
         )
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        await provider.job_cancel(resolved_request)
+        await provider.job_cancel(resolved_request)  # ty: ignore[unresolved-attribute]  # provider is Eval at runtime
 
     async def job_result(
         self,
@@ -261,4 +262,4 @@ class EvalRouter(Eval):
             "EvalRouter.job_result", benchmark_id=resolved_request.benchmark_id, job_id=resolved_request.job_id
         )
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        return await provider.job_result(resolved_request)
+        return await provider.job_result(resolved_request)  # ty: ignore[unresolved-attribute]  # provider is Eval at runtime

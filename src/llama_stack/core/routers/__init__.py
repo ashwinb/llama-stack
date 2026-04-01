@@ -4,16 +4,17 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import Any
+from typing import Any, cast
 
 from llama_stack.core.datatypes import (
     AccessRule,
     RoutedProtocol,
     StackConfig,
 )
+from llama_stack.core.routing_tables.common import CommonRoutingTableImpl
 from llama_stack.core.store import DistributionRegistry
 from llama_stack.providers.utils.inference.inference_store import InferenceStore
-from llama_stack_api import Api, RoutingTable
+from llama_stack_api import Api
 
 
 async def get_routing_table_impl(
@@ -22,7 +23,7 @@ async def get_routing_table_impl(
     _deps: dict[str, Any],
     dist_registry: DistributionRegistry,
     policy: list[AccessRule],
-) -> RoutingTable:
+) -> CommonRoutingTableImpl:
     from ..routing_tables.benchmarks import BenchmarksRoutingTable
     from ..routing_tables.datasets import DatasetsRoutingTable
     from ..routing_tables.models import ModelsRoutingTable
@@ -31,7 +32,7 @@ async def get_routing_table_impl(
     from ..routing_tables.toolgroups import ToolGroupsRoutingTable
     from ..routing_tables.vector_stores import VectorStoresRoutingTable
 
-    api_to_tables = {
+    api_to_tables: dict[str, type[CommonRoutingTableImpl]] = {
         "models": ModelsRoutingTable,
         "shields": ShieldsRoutingTable,
         "datasets": DatasetsRoutingTable,
@@ -44,33 +45,32 @@ async def get_routing_table_impl(
     if api.value not in api_to_tables:
         raise ValueError(f"API {api.value} not found in router map")
 
-    impl: RoutingTable = api_to_tables[api.value](impls_by_provider_id, dist_registry, policy)
+    impl: CommonRoutingTableImpl = api_to_tables[api.value](impls_by_provider_id, dist_registry, policy)
 
     await impl.initialize()
     return impl
 
 
 async def get_auto_router_impl(
-    api: Api, routing_table: RoutingTable, deps: dict[str, Any], run_config: StackConfig, policy: list[AccessRule]
+    api: Api,
+    routing_table: CommonRoutingTableImpl,
+    deps: dict[Api, Any],
+    run_config: StackConfig,
+    policy: list[AccessRule],
 ) -> RoutedProtocol:
+    from ..routing_tables.benchmarks import BenchmarksRoutingTable
+    from ..routing_tables.datasets import DatasetsRoutingTable
+    from ..routing_tables.models import ModelsRoutingTable
+    from ..routing_tables.scoring_functions import ScoringFunctionsRoutingTable
+    from ..routing_tables.shields import ShieldsRoutingTable
+    from ..routing_tables.toolgroups import ToolGroupsRoutingTable
+    from ..routing_tables.vector_stores import VectorStoresRoutingTable
     from .datasets import DatasetIORouter
     from .eval_scoring import EvalRouter, ScoringRouter
     from .inference import InferenceRouter
     from .safety import SafetyRouter
     from .tool_runtime import ToolRuntimeRouter
     from .vector_io import VectorIORouter
-
-    api_to_routers = {
-        "vector_io": VectorIORouter,
-        "inference": InferenceRouter,
-        "safety": SafetyRouter,
-        "datasetio": DatasetIORouter,
-        "scoring": ScoringRouter,
-        "eval": EvalRouter,
-        "tool_runtime": ToolRuntimeRouter,
-    }
-    if api.value not in api_to_routers:
-        raise ValueError(f"API {api.value} not found in router map")
 
     api_to_dep_impl: dict[str, Any] = {}
     # TODO: move pass configs to routers instead
@@ -91,7 +91,23 @@ async def get_auto_router_impl(
     elif api == Api.safety:
         api_to_dep_impl["safety_config"] = run_config.safety
 
-    impl: RoutedProtocol = api_to_routers[api.value](routing_table, **api_to_dep_impl)
+    impl: RoutedProtocol
+    if api == Api.vector_io:
+        impl = VectorIORouter(cast(VectorStoresRoutingTable, routing_table), **api_to_dep_impl)
+    elif api == Api.inference:
+        impl = InferenceRouter(cast(ModelsRoutingTable, routing_table), **api_to_dep_impl)
+    elif api == Api.safety:
+        impl = SafetyRouter(cast(ShieldsRoutingTable, routing_table), **api_to_dep_impl)
+    elif api == Api.datasetio:
+        impl = DatasetIORouter(cast(DatasetsRoutingTable, routing_table))
+    elif api == Api.scoring:
+        impl = ScoringRouter(cast(ScoringFunctionsRoutingTable, routing_table))
+    elif api == Api.eval:
+        impl = EvalRouter(cast(BenchmarksRoutingTable, routing_table))
+    elif api == Api.tool_runtime:
+        impl = ToolRuntimeRouter(cast(ToolGroupsRoutingTable, routing_table))
+    else:
+        raise ValueError(f"API {api.value} not found in router map")
 
     await impl.initialize()
     return impl
