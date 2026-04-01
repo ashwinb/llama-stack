@@ -7,7 +7,7 @@
 import inspect
 import json
 from enum import Enum
-from typing import Annotated, Any, Literal, Union, get_args, get_origin
+from typing import Annotated, Any, Literal, Union, cast, get_args, get_origin
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -183,7 +183,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
     config_data = {}
 
     for field_name, field in config_type.__fields__.items():
-        field_type = field.annotation
+        field_type = cast(type, field.annotation)
         existing_value = getattr(existing_config, field_name) if existing_config else None
         if existing_value:
             default_value = existing_value
@@ -207,7 +207,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
                 user_input = input(prompt + " ")
                 try:
                     value = field_type[user_input]
-                    validated_value = manually_validate_field(config_type, field, value)
+                    validated_value = manually_validate_field(config_type, field_name, value)
                     config_data[field_name] = validated_value
                     break
                 except KeyError:
@@ -240,7 +240,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
         elif can_recurse(field_type):
             log.info(f"\nEntering sub-configuration for {field_name}:")
             config_data[field_name] = prompt_for_config(
-                field_type,
+                cast(type[BaseModel], field_type),
                 existing_value,
             )
         else:
