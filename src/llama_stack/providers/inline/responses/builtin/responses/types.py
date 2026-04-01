@@ -97,7 +97,7 @@ class ToolContext(BaseModel):
     def __init__(
         self,
         current_tools: list[OpenAIResponseInputTool] | None,
-    ):
+    ) -> None:
         super().__init__(
             current_tools=current_tools or [],
             previous_tools={},
@@ -108,7 +108,7 @@ class ToolContext(BaseModel):
     def recover_tools_from_previous_response(
         self,
         previous_response: OpenAIResponseObject,
-    ):
+    ) -> None:
         """Determine which mcp_list_tools objects from previous response we can reuse."""
 
         if self.current_tools and previous_response.tools:
@@ -133,8 +133,8 @@ class ToolContext(BaseModel):
             # tools that are not the same or were not previously defined need to be processed:
             self.tools_to_process = tools_to_process
             # for all matched definitions, get the mcp_list_tools objects from the previous output:
-            self.previous_tool_listings = [
-                obj for obj in previous_response.output if obj.type == "mcp_list_tools" and obj.server_label in matched
+            self.previous_tool_listings = [  # ty:ignore[invalid-assignment]
+                obj for obj in previous_response.output if obj.type == "mcp_list_tools" and obj.server_label in matched  # ty:ignore[unresolved-attribute]
             ]
             # reconstruct the tool to server mappings that can be reused:
             for listing in self.previous_tool_listings:
@@ -196,7 +196,7 @@ class ChatCompletionContext(BaseModel):
         tool_choice: OpenAIResponseInputToolChoice | None = None,
         frequency_penalty: float | None = None,
         extra_body: dict | None = None,
-    ):
+    ) -> None:
         super().__init__(
             model=model,
             messages=messages,
@@ -210,9 +210,9 @@ class ChatCompletionContext(BaseModel):
             extra_body=extra_body,
         )
         if not isinstance(inputs, str):
-            self.approval_requests = [input for input in inputs if input.type == "mcp_approval_request"]
-            self.approval_responses = {
-                input.approval_request_id: input for input in inputs if input.type == "mcp_approval_response"
+            self.approval_requests = [input for input in inputs if input.type == "mcp_approval_request"]  # ty:ignore[invalid-assignment]
+            self.approval_responses = {  # ty:ignore[invalid-assignment]
+                input.approval_request_id: input for input in inputs if input.type == "mcp_approval_response"  # ty:ignore[unresolved-attribute]
             }
 
     def approval_response(self, tool_name: str, arguments: str) -> OpenAIResponseMCPApprovalResponse | None:

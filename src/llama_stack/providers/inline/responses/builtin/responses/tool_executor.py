@@ -58,7 +58,7 @@ class ToolExecutor:
         vector_io_api: VectorIO,
         vector_stores_config=None,
         mcp_session_manager=None,
-    ):
+    ) -> None:
         self.tool_groups_api = tool_groups_api
         self.tool_runtime_api = tool_runtime_api
         self.vector_io_api = vector_io_api
@@ -134,7 +134,7 @@ class ToolExecutor:
         search_results = []
 
         # Create search tasks for all vector stores
-        async def search_single_store(vector_store_id):
+        async def search_single_store(vector_store_id) -> list:
             try:
                 search_response = await self.vector_io_api.openai_search_vector_store(
                     vector_store_id=vector_store_id,
@@ -169,15 +169,15 @@ class ToolExecutor:
         )
 
         # Get templates
-        header_template = self.vector_stores_config.file_search_params.header_template
-        footer_template = self.vector_stores_config.file_search_params.footer_template
-        context_template = self.vector_stores_config.context_prompt_params.context_template
+        header_template = self.vector_stores_config.file_search_params.header_template  # ty:ignore[unresolved-attribute]
+        footer_template = self.vector_stores_config.file_search_params.footer_template  # ty:ignore[unresolved-attribute]
+        context_template = self.vector_stores_config.context_prompt_params.context_template  # ty:ignore[unresolved-attribute]
 
         # Get annotation templates (use defaults if annotations disabled)
         if enable_annotations:
-            chunk_annotation_template = self.vector_stores_config.annotation_prompt_params.chunk_annotation_template
+            chunk_annotation_template = self.vector_stores_config.annotation_prompt_params.chunk_annotation_template  # ty:ignore[unresolved-attribute]
             annotation_instruction_template = (
-                self.vector_stores_config.annotation_prompt_params.annotation_instruction_template
+                self.vector_stores_config.annotation_prompt_params.annotation_instruction_template  # ty:ignore[unresolved-attribute]
             )
         else:
             # Use defaults from VectorStoresConfig when annotations disabled
@@ -335,10 +335,10 @@ class ToolExecutor:
                 }
                 # TODO: follow semantic conventions for Open Telemetry tool spans
                 # https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#execute-tool-span
-                with tracer.start_as_current_span("invoke_mcp_tool", attributes=attributes):
+                with tracer.start_as_current_span("invoke_mcp_tool", attributes=attributes):  # ty:ignore[invalid-argument-type]
                     # Pass session_manager for session reuse within request (fix for #4452)
                     result = await invoke_mcp_tool(
-                        endpoint=mcp_tool.server_url,
+                        endpoint=mcp_tool.server_url,  # ty:ignore[invalid-argument-type]
                         tool_name=function_name,
                         kwargs=tool_kwargs,
                         headers=mcp_tool.headers,

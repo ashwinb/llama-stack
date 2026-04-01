@@ -76,7 +76,7 @@ class BuiltinResponsesImpl(Responses):
         files_api: Files,
         connectors_api: Connectors,
         policy: list[AccessRule],
-    ):
+    ) -> None:
         self.config = config
         self.inference_api = inference_api
         self.vector_io_api = vector_io_api

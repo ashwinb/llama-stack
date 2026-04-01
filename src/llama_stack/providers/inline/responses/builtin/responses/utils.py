@@ -371,7 +371,7 @@ async def convert_response_input_to_chat_messages(
                         if last_user_content == content:
                             continue  # Skip duplicate user message
                 # Dynamic message type call - different message types have different content expectations
-                messages.append(message_type(content=content))  # type: ignore[call-arg,arg-type]
+                messages.append(message_type(content=content))  # type: ignore[call-arg,arg-type]  # ty:ignore[invalid-argument-type]
         if len(tool_call_results):
             # Check if unpaired function_call_outputs reference function_calls from previous messages
             if previous_messages:
@@ -419,7 +419,7 @@ async def convert_response_text_to_chat_response_format(
     if text.format["type"] == "json_schema":
         # Assert name exists for json_schema format
         assert text.format.get("name"), "json_schema format requires a name"
-        schema_name: str = text.format["name"]  # type: ignore[assignment]
+        schema_name: str = text.format["name"]  # type: ignore[assignment]  # ty:ignore[invalid-assignment]
         return OpenAIResponseFormatJSONSchema(
             json_schema=OpenAIJSONSchema(name=schema_name, schema=text.format["schema"])
         )
@@ -500,7 +500,7 @@ def is_function_tool_call(
     if not tool_call.function:
         return False
     for t in tools:
-        if t.type == "function" and t.name == tool_call.function.name:
+        if t.type == "function" and t.name == tool_call.function.name:  # ty:ignore[unresolved-attribute]
             return True
     return False
 
@@ -517,7 +517,7 @@ async def run_guardrails(safety_api: Safety | None, messages: str, guardrail_ids
     # Look up shields to get their provider_resource_id (actual model ID)
     model_ids = []
     # TODO: list_shields not in Safety interface but available at runtime via API routing
-    shields_list = await safety_api.routing_table.list_shields()  # type: ignore[attr-defined]
+    shields_list = await safety_api.routing_table.list_shields()  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
 
     for guardrail_id in guardrail_ids:
         matching_shields = [shield for shield in shields_list.data if shield.identifier == guardrail_id]
@@ -579,8 +579,8 @@ def convert_mcp_tool_choice(
 
     if tool_name:
         if tool_name not in chat_tool_names:
-            return None
-        return {"type": "function", "function": {"name": tool_name}}
+            return None  # ty:ignore[invalid-return-type]
+        return {"type": "function", "function": {"name": tool_name}}  # ty:ignore[invalid-return-type]
 
     elif server_label and server_label_to_tools:
         # no tool name specified, so we need to enforce an allowed_tools with the function tools derived only from the given server label
@@ -588,7 +588,7 @@ def convert_mcp_tool_choice(
         # This already accounts for allowed_tools restrictions applied during _process_mcp_tool
         tool_names = server_label_to_tools.get(server_label, [])
         if not tool_names:
-            return None
+            return None  # ty:ignore[invalid-return-type]
         matching_tools = [{"type": "function", "function": {"name": tool_name}} for tool_name in tool_names]
-        return matching_tools
+        return matching_tools  # ty:ignore[invalid-return-type]
     return []

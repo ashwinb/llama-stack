@@ -121,7 +121,7 @@ class OpenAIResponsesImpl:
         files_api: Files,
         connectors_api: Connectors,
         vector_stores_config=None,
-    ):
+    ) -> None:
         self.inference_api = inference_api
         self.tool_groups_api = tool_groups_api
         self.tool_runtime_api = tool_runtime_api
@@ -250,7 +250,7 @@ class OpenAIResponsesImpl:
         self,
         input: str | list[OpenAIResponseInput],
         previous_response: _OpenAIResponseObjectWithInputAndMessages,
-    ):
+    ) -> list[OpenAIResponseInput]:
         # Convert Sequence to list for mutation
         new_input_items = list(previous_response.input)
         new_input_items.extend(previous_response.output)
@@ -443,7 +443,7 @@ class OpenAIResponsesImpl:
         :param order: The order to return the input items in.
         :returns: An ListOpenAIResponseInputItem.
         """
-        return await self.responses_store.list_response_input_items(response_id, after, before, include, limit, order)
+        return await self.responses_store.list_response_input_items(response_id, after, before, include, limit, order)  # ty:ignore[invalid-argument-type]
 
     async def _store_response(
         self,
@@ -541,7 +541,7 @@ class OpenAIResponsesImpl:
             match stream_chunk.type:
                 case "response.in_progress":
                     # Initial persistence when response starts
-                    in_progress_response = stream_chunk.response
+                    in_progress_response = stream_chunk.response  # ty:ignore[unresolved-attribute]
                     await self.responses_store.upsert_response_object(
                         response_object=in_progress_response,
                         input=input_items,
@@ -569,7 +569,7 @@ class OpenAIResponsesImpl:
 
                 case "response.completed" | "response.incomplete":
                     # Final persistence when response finishes
-                    final_response = stream_chunk.response
+                    final_response = stream_chunk.response  # ty:ignore[unresolved-attribute]
                     messages_to_store = list(
                         filter(
                             lambda x: not isinstance(x, OpenAISystemMessageParam),
@@ -584,7 +584,7 @@ class OpenAIResponsesImpl:
 
                 case "response.failed":
                     # Persist failed state so GET shows error
-                    failed_response = stream_chunk.response
+                    failed_response = stream_chunk.response  # ty:ignore[unresolved-attribute]
                     # Preserve any accumulated non-system messages for failed responses
                     messages_to_store = list(
                         filter(
@@ -634,7 +634,7 @@ class OpenAIResponsesImpl:
         presence_penalty: float | None = None,
         extra_body: dict | None = None,
         stream_options: ResponseStreamOptions | None = None,
-    ):
+    ) -> OpenAIResponseObject | AsyncIterator[OpenAIResponseObjectStream]:
         stream = bool(stream)
         background = bool(background)
         text = OpenAIResponseText(format=OpenAIResponseTextFormat(type="text")) if text is None else text
@@ -761,7 +761,7 @@ class OpenAIResponsesImpl:
                         if final_response is not None:
                             logger.error(
                                 "The response stream produced multiple terminal events, when it should produce exactly one",
-                                response_id=stream_chunk.response.id,
+                                response_id=stream_chunk.response.id,  # ty:ignore[unresolved-attribute]
                                 first_terminal_event=final_event_type,
                                 second_terminal_event=stream_chunk.type,
                                 model=model,
@@ -769,10 +769,10 @@ class OpenAIResponsesImpl:
                                 previous_response_id=previous_response_id,
                             )
                             raise InternalServerError()
-                        final_response = stream_chunk.response
+                        final_response = stream_chunk.response  # ty:ignore[unresolved-attribute]
                         final_event_type = stream_chunk.type
                     case "response.failed":
-                        failed_response = stream_chunk.response
+                        failed_response = stream_chunk.response  # ty:ignore[unresolved-attribute]
                         error_message = (
                             failed_response.error.message
                             if failed_response.error
@@ -868,7 +868,7 @@ class OpenAIResponsesImpl:
         # Store the queued response
         await self.responses_store.store_response_object(
             response_object=queued_response,
-            input=input_items,
+            input=input_items,  # ty:ignore[invalid-argument-type]
             messages=[],
         )
 
@@ -995,7 +995,7 @@ class OpenAIResponsesImpl:
 
             match stream_chunk.type:
                 case "response.completed" | "response.incomplete" | "response.failed":
-                    result_response = stream_chunk.response
+                    result_response = stream_chunk.response  # ty:ignore[unresolved-attribute]
                 case _:
                     pass
 
@@ -1145,11 +1145,11 @@ class OpenAIResponsesImpl:
             async for stream_chunk in orchestrator.create_response():
                 match stream_chunk.type:
                     case "response.completed" | "response.incomplete":
-                        final_response = stream_chunk.response
+                        final_response = stream_chunk.response  # ty:ignore[unresolved-attribute]
                     case "response.failed":
-                        failed_response = stream_chunk.response
+                        failed_response = stream_chunk.response  # ty:ignore[unresolved-attribute]
                     case "response.output_item.done":
-                        item = stream_chunk.item
+                        item = stream_chunk.item  # ty:ignore[unresolved-attribute]
                         output_items.append(item)
                     case _:
                         pass  # Other event types
