@@ -20,7 +20,7 @@ from llama_stack_api import RemoteProviderConfig
 _CLIENT_CLASSES = {}
 
 
-async def get_client_impl(protocol, config: RemoteProviderConfig, _deps: Any):
+async def get_client_impl(protocol: type, config: RemoteProviderConfig, _deps: Any) -> Any:
     """Create and initialize an API client for a remote provider.
 
     Args:
@@ -37,7 +37,7 @@ async def get_client_impl(protocol, config: RemoteProviderConfig, _deps: Any):
     return impl
 
 
-def create_api_client_class(protocol) -> type:
+def create_api_client_class(protocol: type) -> type:
     """Dynamically create an API client class for the given protocol.
 
     Args:
@@ -84,7 +84,8 @@ def create_api_client_class(protocol) -> type:
                 return_type = None
             else:
                 return_type = extract_non_async_iterator_type(sig.return_annotation)
-                assert return_type, f"Could not extract return type for {sig.return_annotation}"
+                if not return_type:
+                    raise ValueError(f"Could not extract return type for {sig.return_annotation}")
 
             async with httpx.AsyncClient() as client:
                 params = self.httpx_request_params(method_name, *args, **kwargs)
@@ -92,7 +93,7 @@ def create_api_client_class(protocol) -> type:
                 response.raise_for_status()
 
                 j = response.json()
-                if j is None:
+                if j is None or return_type is None:
                     return None
                 # print(f"({protocol.__name__}) Returning {j}, type {return_type}")
                 return parse_obj_as(return_type, j)
@@ -194,7 +195,7 @@ def create_api_client_class(protocol) -> type:
 
             method_impl.__name__ = name
             method_impl.__qualname__ = f"APIClient.{name}"
-            method_impl.__signature__ = inspect.signature(method)
+            setattr(method_impl, "__signature__", inspect.signature(method))
             setattr(APIClient, name, method_impl)
 
     # Name the class after the protocol
@@ -203,7 +204,7 @@ def create_api_client_class(protocol) -> type:
     return APIClient
 
 
-def extract_non_async_iterator_type(type_hint):
+def extract_non_async_iterator_type(type_hint: Any) -> Any:
     """Extract the non-AsyncIterator type from a Union type hint.
 
     Args:
@@ -220,7 +221,7 @@ def extract_non_async_iterator_type(type_hint):
     return type_hint
 
 
-def extract_async_iterator_type(type_hint):
+def extract_async_iterator_type(type_hint: Any) -> Any:
     """Extract the inner type from an AsyncIterator within a Union type hint.
 
     Args:
