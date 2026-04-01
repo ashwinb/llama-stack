@@ -60,11 +60,11 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
             custom_metadata = getattr(model_data, "custom_metadata", {}) or {}
 
             # Prefix identifier with provider ID for local registry
-            local_identifier = f"{self.__provider_id__}/{downstream_model_id}"
+            local_identifier = f"{self.__provider_id__}/{downstream_model_id}"  # ty: ignore[unresolved-attribute]  # injected at runtime
 
             model = Model(
                 identifier=local_identifier,
-                provider_id=self.__provider_id__,
+                provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # injected at runtime
                 provider_resource_id=downstream_model_id,
                 model_type=custom_metadata.get("model_type", "llm"),
                 metadata=custom_metadata,
@@ -156,7 +156,7 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         if params.stream:
             return wrap_async_stream(response)
 
-        return response  # type: ignore[return-value]
+        return response  # type: ignore[return-value][return-value]
 
     async def openai_chat_completion(
         self,
@@ -170,7 +170,7 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         if params.stream:
             return wrap_async_stream(response)
 
-        return response  # type: ignore[return-value]
+        return response  # type: ignore[return-value][return-value]
 
     async def openai_embeddings(
         self,
@@ -180,4 +180,4 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         client = self._get_openai_client()
         request_params = params.model_dump(exclude_none=True)
         response = await client.embeddings.create(**request_params)
-        return response  # type: ignore
+        return response  # type: ignore[return-value]  # ty: ignore[invalid-return-type]

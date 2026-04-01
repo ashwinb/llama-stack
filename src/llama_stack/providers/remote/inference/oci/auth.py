@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from collections.abc import Generator, Mapping
+from collections.abc import Generator
 from typing import Any, override
 
 import httpx
@@ -48,7 +48,7 @@ class HttpxOciAuth(httpx.Auth):
         prepared_request = req.prepare()
 
         # Sign the request using the OCI Signer
-        self.signer.do_request_sign(prepared_request)  # type: ignore
+        self.signer.do_request_sign(prepared_request)  # ty: ignore[missing-argument]  # OCI SDK typing limitation
 
         # Update the original HTTPX request with the signed headers
         request.headers.update(prepared_request.headers)
@@ -59,7 +59,7 @@ class HttpxOciAuth(httpx.Auth):
 class OciInstancePrincipalAuth(HttpxOciAuth):
     """OCI authentication using instance principal credentials."""
 
-    def __init__(self, **kwargs: Mapping[str, Any]):
+    def __init__(self, **kwargs: Any):
         self.signer = oci.auth.signers.InstancePrincipalsSecurityTokenSigner(**kwargs)
 
 
@@ -68,7 +68,7 @@ class OciUserPrincipalAuth(HttpxOciAuth):
 
     def __init__(self, config_file: str = DEFAULT_LOCATION, profile_name: str = DEFAULT_PROFILE):
         config = oci.config.from_file(config_file, profile_name)
-        oci.config.validate_config(config)  # type: ignore
+        oci.config.validate_config(config)  # type: ignore[arg-type]
         key_content = ""
         with open(config["key_file"]) as f:
             key_content = f.read()
@@ -78,6 +78,6 @@ class OciUserPrincipalAuth(HttpxOciAuth):
             user=config["user"],
             fingerprint=config["fingerprint"],
             private_key_file_location=config.get("key_file"),
-            pass_phrase="none",  # type: ignore
+            pass_phrase="none",  # type: ignore[arg-type]
             private_key_content=key_content,
         )
