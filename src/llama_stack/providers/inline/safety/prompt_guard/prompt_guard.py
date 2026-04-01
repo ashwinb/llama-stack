@@ -100,7 +100,7 @@ class PromptGuardShield:
 
     async def run(self, messages: list[OpenAIMessageParam]) -> RunShieldResponse:
         message = messages[-1]
-        text = interleaved_content_as_str(message.content)
+        text = interleaved_content_as_str(message.content)  # ty: ignore[invalid-argument-type]
 
         # run model on messages and return response
         inputs = self.tokenizer(text, return_tensors="pt")

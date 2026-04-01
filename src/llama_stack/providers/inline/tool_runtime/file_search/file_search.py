@@ -61,11 +61,11 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             data = parts["data"]
 
             if parts["is_base64"]:
-                file_data = base64.b64decode(data)
+                file_data = base64.b64decode(data)  # ty: ignore[invalid-argument-type]
             else:
-                file_data = data.encode("utf-8")
+                file_data = data.encode("utf-8")  # ty: ignore[unresolved-attribute]
 
-            return file_data, mime_type
+            return file_data, mime_type  # ty: ignore[invalid-return-type]
         else:
             async with httpx.AsyncClient() as client:
                 r = await client.get(uri)
@@ -76,7 +76,7 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
         if isinstance(doc.content, str):
             content_str = doc.content
         else:
-            content_str = interleaved_content_as_str(doc.content)
+            content_str = interleaved_content_as_str(doc.content)  # ty: ignore[invalid-argument-type]
 
         if content_str.startswith("file://"):
             raise ValueError("file:// URIs are not supported. Please use the Files API (/v1/files) to upload files.")
@@ -86,11 +86,11 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             data = parts["data"]
 
             if parts["is_base64"]:
-                file_data = base64.b64decode(data)
+                file_data = base64.b64decode(data)  # ty: ignore[invalid-argument-type]
             else:
-                file_data = data.encode("utf-8")
+                file_data = data.encode("utf-8")  # ty: ignore[unresolved-attribute]
 
-            return file_data, mime_type
+            return file_data, mime_type  # ty: ignore[invalid-return-type]
         else:
             return content_str.encode("utf-8"), "text/plain"
 
@@ -239,7 +239,7 @@ class FileSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime):
             return RAGQueryResult(content=None)
 
         # sort by score
-        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)  # type: ignore
+        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)
         chunks = chunks[: query_config.max_chunks]
 
         tokens = 0
@@ -287,7 +287,7 @@ class FileSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime):
         picked.append(TextContentItem(text=footer_template))
         picked.append(
             TextContentItem(
-                text=context_template.format(query=interleaved_content_as_str(content), annotation_instruction="")
+                text=context_template.format(query=interleaved_content_as_str(content), annotation_instruction="")  # ty: ignore[invalid-argument-type]
             )
         )
 
