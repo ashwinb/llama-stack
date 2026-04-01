@@ -73,7 +73,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
         for toolgroup in toolgroups:
             if toolgroup.identifier not in self.toolgroups_to_tools:
                 try:
-                    await self._index_tools(toolgroup, authorization=authorization)
+                    await self._index_tools(toolgroup, authorization=authorization)  # ty: ignore[invalid-argument-type]
                 except AuthenticationRequiredError:
                     # Send authentication errors back to the client so it knows
                     # that it needs to supply credentials for remote MCP servers.
@@ -82,7 +82,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
                     # Other errors that the client cannot fix are logged and
                     # those specific toolgroups are skipped.
                     logger.warning("Error listing tools for toolgroup", identifier=toolgroup.identifier, error=str(e))
-                    logger.debug(e, exc_info=True)
+                    logger.debug(str(e), exc_info=True)
                     continue
             all_tools.extend(self.toolgroups_to_tools[toolgroup.identifier])
 
@@ -90,7 +90,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
 
     async def _index_tools(self, toolgroup: ToolGroup, authorization: str | None = None) -> None:
         provider_impl = await super().get_provider_impl(toolgroup.identifier, toolgroup.provider_id)
-        tooldefs_response = await provider_impl.list_runtime_tools(
+        tooldefs_response = await provider_impl.list_runtime_tools(  # ty: ignore[unresolved-attribute]
             toolgroup.identifier, toolgroup.mcp_endpoint, authorization=authorization
         )
 
@@ -103,13 +103,13 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
             self.tool_to_toolgroup[tool.name] = toolgroup.identifier
 
     async def list_tool_groups(self) -> ListToolGroupsResponse:
-        return ListToolGroupsResponse(data=await self.get_all_with_type("tool_group"))
+        return ListToolGroupsResponse(data=await self.get_all_with_type("tool_group"))  # ty: ignore[invalid-argument-type]
 
     async def get_tool_group(self, toolgroup_id: str) -> ToolGroup:
         tool_group = await self.get_object_by_identifier("tool_group", toolgroup_id)
         if tool_group is None:
             raise ToolGroupNotFoundError(toolgroup_id)
-        return tool_group
+        return tool_group  # ty: ignore[invalid-return-type]
 
     async def get_tool(self, tool_name: str) -> ToolDef:
         if tool_name in self.tool_to_toolgroup:
@@ -143,7 +143,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
             await self._index_tools(toolgroup)
 
     async def unregister_toolgroup(self, toolgroup_id: str) -> None:
-        await self.unregister_object(await self.get_tool_group(toolgroup_id))
+        await self.unregister_object(await self.get_tool_group(toolgroup_id))  # ty: ignore[invalid-argument-type]
 
     async def shutdown(self) -> None:
         pass
