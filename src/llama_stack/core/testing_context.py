@@ -5,9 +5,11 @@
 # the root directory of this source tree.
 
 import os
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 
 from llama_stack.core.request_headers import PROVIDER_DATA_VAR
+
+_TestContextToken = Token[str | None]
 
 TEST_CONTEXT: ContextVar[str | None] = ContextVar("llama_stack_test_context", default=None)
 
@@ -21,7 +23,7 @@ def get_test_context() -> str | None:
     return TEST_CONTEXT.get()
 
 
-def set_test_context(value: str | None):
+def set_test_context(value: str | None) -> _TestContextToken:
     """Set the test context identifier for the current async context.
 
     Args:
@@ -33,7 +35,7 @@ def set_test_context(value: str | None):
     return TEST_CONTEXT.set(value)
 
 
-def reset_test_context(token) -> None:
+def reset_test_context(token: _TestContextToken) -> None:
     """Reset the test context to its previous value using a token from set_test_context.
 
     Args:
@@ -42,7 +44,7 @@ def reset_test_context(token) -> None:
     TEST_CONTEXT.reset(token)
 
 
-def sync_test_context_from_provider_data():
+def sync_test_context_from_provider_data() -> _TestContextToken | None:
     """Sync test context from provider data when running in server test mode."""
     if "LLAMA_STACK_TEST_INFERENCE_MODE" not in os.environ:
         return None
