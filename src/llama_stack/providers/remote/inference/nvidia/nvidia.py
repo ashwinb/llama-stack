@@ -29,6 +29,7 @@ logger = get_logger(name=__name__, category="inference::nvidia")
 class NVIDIAInferenceAdapter(OpenAIMixin):
     """Inference adapter for NVIDIA NIM models and services."""
 
+    __provider_id__: str = ""  # runtime-injected by framework
     config: NVIDIAConfig
 
     provider_data_api_key_field: str = "nvidia_api_key"
@@ -54,7 +55,7 @@ class NVIDIAInferenceAdapter(OpenAIMixin):
                     "API key is required for hosted NVIDIA NIM. Either provide an API key or use a self-hosted NIM."
                 )
 
-    def get_api_key(self) -> str:
+    def get_api_key(self) -> str | None:
         """
         Get the API key for OpenAI mixin.
 
