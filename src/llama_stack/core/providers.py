@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from llama_stack.log import get_logger
 from llama_stack_api import (
+    Api,
     HealthResponse,
     HealthStatus,
     InspectProviderRequest,
@@ -31,7 +32,7 @@ class ProviderImplConfig(BaseModel):
     config: StackConfig
 
 
-async def get_provider_impl(config, deps):
+async def get_provider_impl(config: ProviderImplConfig, deps: dict[Api, Any]) -> "ProviderImpl":
     """Create and initialize a ProviderImpl instance.
 
     Args:
@@ -49,7 +50,7 @@ async def get_provider_impl(config, deps):
 class ProviderImpl(Providers):
     """Implementation of the Providers API for listing and inspecting configured providers."""
 
-    def __init__(self, config, deps):
+    def __init__(self, config: ProviderImplConfig, deps: dict[Api, Any]) -> None:
         self.stack_config = config.config
         self.deps = deps
 

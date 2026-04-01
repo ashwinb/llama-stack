@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 import importlib
+import importlib.resources
 import os
 import signal
 import subprocess
