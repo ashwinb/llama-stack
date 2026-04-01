@@ -47,11 +47,11 @@ class SafetyRouter(Safety):
 
     async def register_shield(self, request: RegisterShieldRequest) -> Shield:
         logger.debug("SafetyRouter.register_shield", shield_id=request.shield_id)
-        return await self.routing_table.register_shield(request)
+        return await self.routing_table.register_shield(request)  # ty: ignore[unresolved-attribute] - routing table is a ShieldsRoutingTable at runtime
 
     async def unregister_shield(self, identifier: str) -> None:
         logger.debug("SafetyRouter.unregister_shield", identifier=identifier)
-        return await self.routing_table.unregister_shield(UnregisterShieldRequest(identifier=identifier))
+        return await self.routing_table.unregister_shield(UnregisterShieldRequest(identifier=identifier))  # ty: ignore[unresolved-attribute] - routing table is a ShieldsRoutingTable at runtime
 
     async def run_shield(self, request: RunShieldRequest) -> RunShieldResponse:
         with tracer.start_as_current_span(name=safety_span_name(request.shield_id)):
@@ -62,7 +62,7 @@ class SafetyRouter(Safety):
         return response
 
     async def run_moderation(self, request: RunModerationRequest) -> ModerationObject:
-        list_shields_response = await self.routing_table.list_shields()
+        list_shields_response = await self.routing_table.list_shields()  # ty: ignore[unresolved-attribute] - routing table is a ShieldsRoutingTable at runtime
         shields = list_shields_response.data
 
         selected_shield: Shield | None = None

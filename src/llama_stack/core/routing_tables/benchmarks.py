@@ -28,13 +28,13 @@ class BenchmarksRoutingTable(CommonRoutingTableImpl, Benchmarks):
     """Routing table for managing benchmark registrations and provider lookups."""
 
     async def list_benchmarks(self, request: ListBenchmarksRequest) -> ListBenchmarksResponse:
-        return ListBenchmarksResponse(data=await self.get_all_with_type("benchmark"))
+        return ListBenchmarksResponse(data=await self.get_all_with_type("benchmark"))  # ty: ignore[invalid-argument-type] # RoutableObjectWithProvider union vs Benchmark
 
     async def get_benchmark(self, request: GetBenchmarkRequest) -> Benchmark:
         benchmark = await self.get_object_by_identifier("benchmark", request.benchmark_id)
         if benchmark is None:
             raise ValueError(f"Benchmark '{request.benchmark_id}' not found")
-        return benchmark
+        return benchmark  # ty: ignore[invalid-return-type] # RoutableObjectWithProvider union vs Benchmark
 
     async def register_benchmark(
         self,
@@ -65,4 +65,4 @@ class BenchmarksRoutingTable(CommonRoutingTableImpl, Benchmarks):
     async def unregister_benchmark(self, request: UnregisterBenchmarkRequest) -> None:
         get_request = GetBenchmarkRequest(benchmark_id=request.benchmark_id)
         existing_benchmark = await self.get_benchmark(get_request)
-        await self.unregister_object(existing_benchmark)
+        await self.unregister_object(existing_benchmark)  # ty: ignore[invalid-argument-type] # Benchmark vs RoutableObjectWithProvider union

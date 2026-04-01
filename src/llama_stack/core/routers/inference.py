@@ -100,10 +100,10 @@ class InferenceRouter(Inference):
             metadata=metadata,
             model_type=model_type,
         )
-        await self.routing_table.register_model(request)
+        await self.routing_table.register_model(request)  # ty: ignore[unresolved-attribute] - routing table is a ModelsRoutingTable at runtime
 
     async def _get_model_provider(self, model_id: str, expected_model_type: str) -> tuple[Inference, str]:
-        model = await self.routing_table.get_object_by_identifier("model", model_id)
+        model = await self.routing_table.get_object_by_identifier("model", model_id)  # ty: ignore[unresolved-attribute] - routing table is a ModelsRoutingTable at runtime
         if model:
             if model.model_type != expected_model_type:
                 raise ModelTypeError(model_id, model.model_type, expected_model_type)
@@ -125,7 +125,7 @@ class InferenceRouter(Inference):
         provider_id, provider_resource_id = splits
 
         # Check if provider exists
-        if provider_id not in self.routing_table.impls_by_provider_id:
+        if provider_id not in self.routing_table.impls_by_provider_id:  # ty: ignore[unresolved-attribute] - routing table is a ModelsRoutingTable at runtime
             logger.warning("Provider not found for model", provider_id=provider_id, model_id=model_id)
             raise ModelNotFoundError(model_id)
 
@@ -134,13 +134,13 @@ class InferenceRouter(Inference):
             identifier=model_id,
             provider_id=provider_id,
             provider_resource_id=provider_resource_id,
-            model_type=expected_model_type,
+            model_type=expected_model_type,  # ty: ignore[invalid-argument-type] - str is compatible with ModelType at runtime
             metadata={},  # Empty metadata for temporary object
         )
 
         # Perform RBAC check
         user = get_authenticated_user()
-        if not is_action_allowed(self.routing_table.policy, "read", temp_model, user):
+        if not is_action_allowed(self.routing_table.policy, "read", temp_model, user):  # ty: ignore[unresolved-attribute, invalid-argument-type] - routing table has policy at runtime; str/ModelWithOwner compatible with Action/ProtectedResource
             logger.debug(
                 "Access denied to model via fallback path for user",
                 model_id=model_id,
@@ -148,9 +148,9 @@ class InferenceRouter(Inference):
             )
             raise ModelNotFoundError(model_id)
 
-        return self.routing_table.impls_by_provider_id[provider_id], provider_resource_id
+        return self.routing_table.impls_by_provider_id[provider_id], provider_resource_id  # ty: ignore[unresolved-attribute] - routing table is a ModelsRoutingTable at runtime
 
-    async def rerank(
+    async def rerank(  # ty: ignore[invalid-method-override] - param name differs from base class but is compatible
         self,
         params: RerankRequest,
     ) -> RerankResponse:
@@ -173,11 +173,11 @@ class InferenceRouter(Inference):
         params.model = provider_resource_id
 
         if params.stream:
-            return await provider.openai_completion(params)
+            return await provider.openai_completion(params)  # ty: ignore[invalid-return-type] - stream branch returns correct type at runtime
 
         response = await provider.openai_completion(params)
-        response.model = request_model_id
-        return response
+        response.model = request_model_id  # ty: ignore[invalid-assignment] - response is OpenAICompletion in non-stream branch
+        return response  # ty: ignore[invalid-return-type] - response is OpenAICompletion in non-stream branch
 
     async def openai_chat_completion(
         self,
@@ -215,9 +215,9 @@ class InferenceRouter(Inference):
             # For streaming, the provider returns AsyncIterator[OpenAIChatCompletionChunk]
             # We need to add metrics to each chunk and store the final completion
             return self.stream_tokens_and_compute_metrics_openai_chat(
-                response=response_stream,
+                response=response_stream,  # ty: ignore[invalid-argument-type] - stream branch returns AsyncIterator at runtime
                 fully_qualified_model_id=request_model_id,
-                provider_id=provider.__provider_id__,
+                provider_id=provider.__provider_id__,  # ty: ignore[unresolved-attribute] - __provider_id__ is set dynamically on provider instances
                 messages=params.messages,
             )
 
@@ -271,17 +271,17 @@ class InferenceRouter(Inference):
         self, provider: Inference, params: OpenAIChatCompletionRequestWithExtraBody
     ) -> OpenAIChatCompletion:
         response = await provider.openai_chat_completion(params)
-        for choice in response.choices:
+        for choice in response.choices:  # ty: ignore[unresolved-attribute] - response is OpenAIChatCompletion in non-stream path
             # some providers return an empty list for no tool calls in non-streaming responses
             # but the OpenAI API returns None. So, set tool_calls to None if it's empty
             if choice.message and choice.message.tool_calls is not None and len(choice.message.tool_calls) == 0:
                 choice.message.tool_calls = None
-        return response
+        return response  # ty: ignore[invalid-return-type] - response is OpenAIChatCompletion in non-stream path
 
     async def health(self) -> dict[str, HealthResponse]:
         health_statuses = {}
         timeout = 1  # increasing the timeout to 1 second for health checks
-        for provider_id, impl in self.routing_table.impls_by_provider_id.items():
+        for provider_id, impl in self.routing_table.impls_by_provider_id.items():  # ty: ignore[unresolved-attribute] - routing table is a ModelsRoutingTable at runtime
             try:
                 # check if the provider has a health method
                 if not hasattr(impl, "health"):
@@ -428,7 +428,7 @@ class InferenceRouter(Inference):
                     message = OpenAIChatCompletionResponseMessage(
                         role="assistant",
                         content=content_str if content_str else None,
-                        tool_calls=assembled_tool_calls if assembled_tool_calls else None,
+                        tool_calls=assembled_tool_calls if assembled_tool_calls else None,  # ty: ignore[invalid-argument-type] - list[OpenAIChatCompletionToolCall] is compatible with expected union type
                     )
                     logprobs_content = choice_data["logprobs_content_parts"]
                     final_logprobs = OpenAIChoiceLogprobs(content=logprobs_content) if logprobs_content else None
