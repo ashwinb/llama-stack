@@ -11,6 +11,7 @@ from llama_stack.core.access_control.access_control import is_action_allowed
 from llama_stack.core.datatypes import (
     ModelWithOwner,
     RegistryEntrySource,
+    RoutedProtocol,
 )
 from llama_stack.core.request_headers import PROVIDER_DATA_VAR, NeedsRequestProviderData, get_authenticated_user
 from llama_stack.core.utils.dynamic import instantiate_class_type
@@ -194,7 +195,7 @@ class ModelsRoutingTable(CommonRoutingTableImpl, Models):
             model_id = request_or_model_id
         return await lookup_model(self, model_id)
 
-    async def get_provider_impl(self, model_id: str) -> Any:
+    async def get_provider_impl(self, model_id: str) -> RoutedProtocol:  # type: ignore[override]
         model = await lookup_model(self, model_id)
         if model.provider_id not in self.impls_by_provider_id:
             raise ValueError(f"Provider {model.provider_id} not found in the routing table")
