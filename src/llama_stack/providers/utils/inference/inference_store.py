@@ -6,7 +6,7 @@
 import asyncio
 from typing import Any, NamedTuple
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError  # ty: ignore[unresolved-import]
 
 from llama_stack.core.datatypes import AccessRule
 from llama_stack.core.storage.datatypes import InferenceStoreReference, StorageBackendType

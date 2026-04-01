@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from llama_stack.log import get_logger
 
 if TYPE_CHECKING:
-    from sentence_transformers import SentenceTransformer
+    from sentence_transformers import SentenceTransformer  # ty: ignore[unresolved-import]
 
 from llama_stack_api import (
     ModelStore,
@@ -51,7 +51,7 @@ class SentenceTransformerEmbeddingMixin:
             raise ValueError("Empty list not supported")
 
         # Get trust_remote_code setting from config
-        trust_remote_code = getattr(self.config, "trust_remote_code", False)
+        trust_remote_code = getattr(self.config, "trust_remote_code", False)  # ty: ignore[unresolved-attribute]
 
         # Get the model and generate embeddings
         embedding_model = await self._load_sentence_transformer_model(params.model, trust_remote_code)
@@ -98,8 +98,8 @@ class SentenceTransformerEmbeddingMixin:
             log.info(f"Loading sentence transformer for {model}...")
 
             def _load_model():
-                import torch
-                from sentence_transformers import SentenceTransformer
+                import torch  # ty: ignore[unresolved-import]
+                from sentence_transformers import SentenceTransformer  # ty: ignore[unresolved-import]
 
                 platform_name = platform.system()
                 if platform_name == DARWIN:

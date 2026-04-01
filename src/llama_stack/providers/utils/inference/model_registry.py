@@ -299,17 +299,17 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
 
     async def register_model(self, model: Model) -> Model:
         # Check if model is supported in static configuration
-        supported_model_id = self.get_provider_model_id(model.provider_resource_id)
+        supported_model_id = self.get_provider_model_id(model.provider_resource_id)  # ty: ignore[invalid-argument-type]
 
         # If not found in static config, check if it's available dynamically from provider
         if not supported_model_id:
-            if await self.check_model_availability(model.provider_resource_id):
+            if await self.check_model_availability(model.provider_resource_id):  # ty: ignore[invalid-argument-type]
                 supported_model_id = model.provider_resource_id
             else:
                 # note: we cannot provide a complete list of supported models without
                 #       getting a complete list from the provider, so we return "..."
                 all_supported_models = [*self.alias_to_provider_id_map.keys(), "..."]
-                raise UnsupportedModelError(model.provider_resource_id, all_supported_models)
+                raise UnsupportedModelError(model.provider_resource_id, all_supported_models)  # ty: ignore[invalid-argument-type]
 
         provider_resource_id = self.get_provider_model_id(model.model_id)
         if model.model_type == ModelType.embedding:
@@ -323,7 +323,7 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
         else:
             llama_model = model.metadata.get("llama_model")
             if llama_model:
-                existing_llama_model = self.get_llama_model(model.provider_resource_id)
+                existing_llama_model = self.get_llama_model(model.provider_resource_id)  # ty: ignore[invalid-argument-type]
                 if existing_llama_model:
                     if existing_llama_model != llama_model:
                         raise ValueError(
@@ -333,7 +333,7 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
                     if llama_model not in ALL_HUGGINGFACE_REPOS_TO_MODEL_DESCRIPTOR:
                         raise ValueError(
                             f"Invalid llama_model '{llama_model}' specified in metadata. "
-                            f"Must be one of: {', '.join(ALL_HUGGINGFACE_REPOS_TO_MODEL_DESCRIPTOR.keys())}"
+                            f"Must be one of: {', '.join(ALL_HUGGINGFACE_REPOS_TO_MODEL_DESCRIPTOR.keys())}"  # ty: ignore[no-matching-overload]
                         )
                     self.provider_id_to_llama_model_map[model.provider_resource_id] = (
                         ALL_HUGGINGFACE_REPOS_TO_MODEL_DESCRIPTOR[llama_model]

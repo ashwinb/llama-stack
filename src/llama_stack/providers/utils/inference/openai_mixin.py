@@ -158,14 +158,14 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         """
         if metadata := self.embedding_model_metadata.get(identifier):
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
                 metadata=metadata,
             )
         return Model(
-            provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+            provider_id=self.__provider_id__,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=ModelType.llm,
@@ -290,11 +290,11 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         :return: The provider-specific model ID (e.g., "gpt-4")
         """
         # self.model_store is injected by the distribution system at runtime
-        if not await self.model_store.has_model(model):  # type: ignore[attr-defined]
+        if not await self.model_store.has_model(model):  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
             return model
 
         # Look up the registered model to get the provider-specific model ID
-        model_obj: Model = await self.model_store.get_model(model)  # type: ignore[attr-defined]
+        model_obj: Model = await self.model_store.get_model(model)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         # provider_resource_id is str | None, but we expect it to be str for OpenAI calls
         if model_obj.provider_resource_id is None:
             raise ValueError(f"Model {model} has no provider_resource_id")
@@ -379,14 +379,14 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             async def _localize_image_url(m: OpenAIMessageParam) -> OpenAIMessageParam:
                 if isinstance(m.content, list):
                     for c in m.content:
-                        if c.type == "image_url" and c.image_url and c.image_url.url and "http" in c.image_url.url:
-                            localize_result = await localize_image_content(c.image_url.url)
+                        if c.type == "image_url" and c.image_url and c.image_url.url and "http" in c.image_url.url:  # ty: ignore[unresolved-attribute]
+                            localize_result = await localize_image_content(c.image_url.url)  # ty: ignore[unresolved-attribute]
                             if localize_result is None:
                                 raise ValueError(
-                                    f"Failed to localize image content from {c.image_url.url[:42]}{'...' if len(c.image_url.url) > 42 else ''}"
+                                    f"Failed to localize image content from {c.image_url.url[:42]}{'...' if len(c.image_url.url) > 42 else ''}"  # ty: ignore[unresolved-attribute]
                                 )
                             content, format = localize_result
-                            c.image_url.url = f"data:image/{format};base64,{base64.b64encode(content).decode('utf-8')}"
+                            c.image_url.url = f"data:image/{format};base64,{base64.b64encode(content).decode('utf-8')}"  # ty: ignore[unresolved-attribute]
                 # else it's a string and we don't need to modify it
                 return m
 
@@ -501,7 +501,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             return model
 
         if not await self.check_model_availability(model.provider_model_id):
-            raise ValueError(f"Model {model.provider_model_id} is not available from provider {self.__provider_id__}")  # type: ignore[attr-defined]
+            raise ValueError(f"Model {model.provider_model_id} is not available from provider {self.__provider_id__}")  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         return model
 
     async def unregister_model(self, model_id: str) -> None:
@@ -562,8 +562,8 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         """
         # First check if the model is pre-registered in the model store
         if hasattr(self, "model_store") and self.model_store:
-            qualified_model = f"{self.__provider_id__}/{model}"  # type: ignore[attr-defined]
-            if await self.model_store.has_model(qualified_model):
+            qualified_model = f"{self.__provider_id__}/{model}"  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            if await self.model_store.has_model(qualified_model):  # ty: ignore[unresolved-attribute]
                 return True
 
         # Then check the provider's dynamic model cache
