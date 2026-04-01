@@ -44,7 +44,7 @@ class AdminImplConfig(BaseModel):
     config: StackConfig
 
 
-async def get_provider_impl(config, deps):
+async def get_provider_impl(config: AdminImplConfig, deps: dict[Api, Any]) -> "AdminImpl":
     """Create and initialize an AdminImpl instance.
 
     Args:
@@ -62,7 +62,7 @@ async def get_provider_impl(config, deps):
 class AdminImpl(Admin):
     """Implementation of the Admin API providing provider management, route listing, health, and version endpoints."""
 
-    def __init__(self, config: AdminImplConfig, deps):
+    def __init__(self, config: AdminImplConfig, deps: dict[Api, Any]) -> None:
         self.config = config
         self.deps = deps
 

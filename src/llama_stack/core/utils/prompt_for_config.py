@@ -18,7 +18,7 @@ from llama_stack.log import get_logger
 log = get_logger(name=__name__, category="core")
 
 
-def is_list_of_primitives(field_type):
+def is_list_of_primitives(field_type: Any) -> bool:
     """Check if a field type is a List of primitive types."""
     origin = get_origin(field_type)
     if origin is list or origin is list:
@@ -28,7 +28,7 @@ def is_list_of_primitives(field_type):
     return False
 
 
-def is_basemodel_without_fields(typ):
+def is_basemodel_without_fields(typ: Any) -> bool:
     """Check if a type is a Pydantic BaseModel subclass with no defined fields.
 
     Args:
@@ -40,7 +40,7 @@ def is_basemodel_without_fields(typ):
     return inspect.isclass(typ) and issubclass(typ, BaseModel) and len(typ.__fields__) == 0
 
 
-def can_recurse(typ):
+def can_recurse(typ: Any) -> bool:
     """Check if a type is a Pydantic BaseModel subclass with fields that can be recursively prompted.
 
     Args:
@@ -52,19 +52,19 @@ def can_recurse(typ):
     return inspect.isclass(typ) and issubclass(typ, BaseModel) and len(typ.__fields__) > 0
 
 
-def get_literal_values(field):
+def get_literal_values(field: FieldInfo) -> tuple[Any, ...] | None:
     """Extract literal values from a field if it's a Literal type."""
     if get_origin(field.annotation) is Literal:
         return get_args(field.annotation)
     return None
 
 
-def is_optional(field_type):
+def is_optional(field_type: Any) -> bool:
     """Check if a field type is Optional."""
     return get_origin(field_type) is Union and type(None) in get_args(field_type)
 
 
-def get_non_none_type(field_type):
+def get_non_none_type(field_type: Any) -> Any:
     """Get the non-None type from an Optional type."""
     return next(arg for arg in get_args(field_type) if arg is not type(None))
 
@@ -107,10 +107,10 @@ def is_discriminated_union(typ) -> bool:
 
 
 def prompt_for_discriminated_union(
-    field_name,
-    typ,
-    existing_value,
-):
+    field_name: str,
+    typ: Any,
+    existing_value: BaseModel | None,
+) -> BaseModel:
     """Interactively prompt the user to select and configure a discriminated union variant.
 
     Args:
@@ -197,7 +197,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
 
         # Skip fields with no type annotations
         if is_basemodel_without_fields(field_type):
-            config_data[field_name] = field_type()
+            config_data[field_name] = field_type()  # ty: ignore[call-non-callable]
             continue
 
         if inspect.isclass(field_type) and issubclass(field_type, Enum):
@@ -207,7 +207,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
                 user_input = input(prompt + " ")
                 try:
                     value = field_type[user_input]
-                    validated_value = manually_validate_field(config_type, field, value)
+                    validated_value = manually_validate_field(config_type, field_name, value)
                     config_data[field_name] = validated_value
                     break
                 except KeyError:
@@ -240,7 +240,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
         elif can_recurse(field_type):
             log.info(f"\nEntering sub-configuration for {field_name}:")
             config_data[field_name] = prompt_for_config(
-                field_type,
+                field_type,  # ty: ignore[invalid-argument-type]
                 existing_value,
             )
         else:
@@ -310,7 +310,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
 
                             value = field_type(**ast.literal_eval(user_input))
                         else:
-                            value = field_type(user_input)
+                            value = field_type(user_input)  # ty: ignore[call-non-callable]
 
                     except ValueError:
                         log.error(f"Invalid input. Expected type: {getattr(field_type, '__name__', str(field_type))}")

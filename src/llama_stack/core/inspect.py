@@ -27,6 +27,8 @@ from llama_stack_api import (
     VersionInfo,
 )
 
+from typing import Any
+
 
 class DistributionInspectConfig(BaseModel):
     """Configuration for the Inspect API implementation."""
@@ -34,7 +36,7 @@ class DistributionInspectConfig(BaseModel):
     config: StackConfig
 
 
-async def get_provider_impl(config, deps):
+async def get_provider_impl(config: DistributionInspectConfig, deps: dict[Api, Any]) -> "DistributionInspectImpl":
     """Create and initialize a DistributionInspectImpl instance.
 
     Args:
@@ -52,7 +54,7 @@ async def get_provider_impl(config, deps):
 class DistributionInspectImpl(Inspect):
     """Implementation of the Inspect API providing route listing, health, and version endpoints."""
 
-    def __init__(self, config: DistributionInspectConfig, deps):
+    def __init__(self, config: DistributionInspectConfig, deps: dict[Api, Any]) -> None:
         self.stack_config = config.config
         self.deps = deps
 
