@@ -6,12 +6,12 @@
 
 from typing import Any
 
-from llama_stack_api import Inference
+from llama_stack_api import Api
 
 from .config import NVIDIAConfig
 
 
-async def get_adapter_impl(config: NVIDIAConfig, _deps: dict[str, Any]) -> Inference:
+async def get_adapter_impl(config: NVIDIAConfig, _deps: dict[Api, Any]) -> Any:
     # import dynamically so `llama stack list-deps` does not fail due to missing dependencies
     from .nvidia import NVIDIAInferenceAdapter
 

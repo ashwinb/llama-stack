@@ -5,12 +5,12 @@
 # the root directory of this source tree.
 from typing import Any
 
-from llama_stack_api import Inference
+from llama_stack_api import Api
 
 from .config import BedrockConfig
 
 
-async def get_adapter_impl(config: BedrockConfig, _deps: dict[str, Any]) -> Inference:
+async def get_adapter_impl(config: BedrockConfig, _deps: dict[Api, Any]) -> Any:
     from .bedrock import BedrockInferenceAdapter
 
     assert isinstance(config, BedrockConfig), f"Unexpected config type: {type(config)}"
