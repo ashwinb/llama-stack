@@ -7,7 +7,6 @@
 import re
 import uuid
 from string import Template
-
 from typing import Any
 
 from llama_stack.core.datatypes import Api
