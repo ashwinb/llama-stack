@@ -4,12 +4,12 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from llama_stack_api import Inference
+from typing import Any
 
 from .config import NVIDIAConfig
 
 
-async def get_adapter_impl(config: NVIDIAConfig, _deps) -> Inference:
+async def get_adapter_impl(config: NVIDIAConfig, _deps: dict[str, Any]) -> Any:
     # import dynamically so `llama stack list-deps` does not fail due to missing dependencies
     from .nvidia import NVIDIAInferenceAdapter
 
