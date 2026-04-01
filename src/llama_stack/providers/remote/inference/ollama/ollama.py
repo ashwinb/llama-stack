@@ -7,7 +7,7 @@
 
 import asyncio
 
-from ollama import AsyncClient as AsyncOllamaClient
+from ollama import AsyncClient as AsyncOllamaClient  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 from llama_stack.providers.remote.inference.ollama.config import OllamaImplConfig
@@ -28,7 +28,7 @@ class OllamaInferenceAdapter(OpenAIMixin):
     config: OllamaImplConfig
 
     # automatically set by the resolver when instantiating the provider
-    __provider_id__: str
+    __provider_id__: str = ""
 
     embedding_model_metadata: dict[str, dict[str, int]] = {
         "all-minilm:l6-v2": {
