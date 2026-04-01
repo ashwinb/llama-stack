@@ -4,10 +4,14 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
+from typing import Any
+
+from llama_stack_api import Inference
+
 from .config import RunpodImplConfig
 
 
-async def get_adapter_impl(config: RunpodImplConfig, _deps):
+async def get_adapter_impl(config: RunpodImplConfig, _deps: dict[str, Any]) -> Inference:
     from .runpod import RunpodInferenceAdapter
 
     assert isinstance(config, RunpodImplConfig), f"Unexpected config type: {type(config)}"

@@ -4,7 +4,11 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, HttpUrl, SecretStr
+
+from llama_stack_api import Inference
 
 from .config import PassthroughImplConfig
 
@@ -24,7 +28,7 @@ class PassthroughProviderDataValidator(BaseModel):
     passthrough_api_key: SecretStr | None = None
 
 
-async def get_adapter_impl(config: PassthroughImplConfig, _deps):
+async def get_adapter_impl(config: PassthroughImplConfig, _deps: dict[str, Any]) -> Inference:
     from .passthrough import PassthroughInferenceAdapter
 
     if not isinstance(config, PassthroughImplConfig):
