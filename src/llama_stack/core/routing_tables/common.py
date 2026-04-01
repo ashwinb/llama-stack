@@ -4,8 +4,6 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import Any
-
 from llama_stack.core.access_control.access_control import AccessDeniedError, is_action_allowed
 from llama_stack.core.access_control.datatypes import Action
 from llama_stack.core.datatypes import (
@@ -281,7 +279,9 @@ class CommonRoutingTableImpl(RoutingTable):
         # Apply attribute-based access control filtering
         if filtered_objs:
             filtered_objs = [
-                obj for obj in filtered_objs if is_action_allowed(self.policy, Action.READ, obj, get_authenticated_user())
+                obj
+                for obj in filtered_objs
+                if is_action_allowed(self.policy, Action.READ, obj, get_authenticated_user())
             ]
 
         return filtered_objs
