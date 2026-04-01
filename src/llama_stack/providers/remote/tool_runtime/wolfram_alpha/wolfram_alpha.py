@@ -30,7 +30,7 @@ class WolframAlphaToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsR
         self.config = config
         self.url = "https://api.wolframalpha.com/v2/query"
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         pass
 
     async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
@@ -90,7 +90,7 @@ class WolframAlphaToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsR
             response.raise_for_status()
         return ToolInvocationResult(content=json.dumps(self._clean_wolfram_alpha_response(response.json())))
 
-    def _clean_wolfram_alpha_response(self, wa_response):
+    def _clean_wolfram_alpha_response(self, wa_response: dict[str, Any]) -> dict[str, Any]:
         remove = {
             "queryresult": [
                 "datatypes",

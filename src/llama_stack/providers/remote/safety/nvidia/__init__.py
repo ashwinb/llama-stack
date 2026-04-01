@@ -7,10 +7,12 @@
 
 from typing import Any
 
+from llama_stack_api import Safety
+
 from .config import NVIDIASafetyConfig
 
 
-async def get_adapter_impl(config: NVIDIASafetyConfig, _deps) -> Any:
+async def get_adapter_impl(config: NVIDIASafetyConfig, _deps: dict[str, Any]) -> Safety:
     from .nvidia import NVIDIASafetyAdapter
 
     impl = NVIDIASafetyAdapter(config)
