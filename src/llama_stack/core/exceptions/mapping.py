@@ -38,7 +38,7 @@ EXCEPTION_MAP: dict[type, tuple[int, str]] = {
 }
 
 # For deserialization by class name (used by testing/exception_utils.py)
-EXCEPTION_TYPES_BY_NAME: dict[str, type[Exception]] = {cls.__name__: cls for cls in EXCEPTION_MAP}
+EXCEPTION_TYPES_BY_NAME: dict[str, type[Exception]] = {cls.__name__: cls for cls in EXCEPTION_MAP}  # ty: ignore[invalid-assignment]  # all keys in EXCEPTION_MAP are Exception subclasses
 
 
 def translate_exception_to_http(exc: Exception) -> HTTPException | None:

@@ -42,8 +42,8 @@ class PromptGuardSafetyImpl(ShieldToModerationMixin, Safety, ShieldsProtocolPriv
 
     async def initialize(self) -> None:
         # Lazy import torch and transformers to reduce startup memory (~46MB+ savings)
-        import torch
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        import torch  # ty: ignore[unresolved-import]  # optional dependency
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer  # ty: ignore[unresolved-import]  # optional dependency
 
         model_dir = model_local_dir(PROMPT_GUARD_MODEL)
         self.shield = PromptGuardShield(

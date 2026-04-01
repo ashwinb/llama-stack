@@ -239,7 +239,7 @@ class FileSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime):
             return RAGQueryResult(content=None)
 
         # sort by score
-        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)  # type: ignore
+        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)
         chunks = chunks[: query_config.max_chunks]
 
         tokens = 0

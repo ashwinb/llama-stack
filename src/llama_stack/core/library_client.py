@@ -24,7 +24,7 @@ from fastapi import Response as FastAPIResponse
 from llama_stack.core.utils.type_inspection import is_body_param, is_unwrapped_body_param
 
 try:
-    from llama_stack_client import (
+    from llama_stack_client import (  # ty: ignore[unresolved-import]  # optional dependency
         NOT_GIVEN,
         APIResponse,
         AsyncAPIResponse,

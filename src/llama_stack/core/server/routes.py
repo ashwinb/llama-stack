@@ -68,7 +68,7 @@ def get_all_api_routes(
                     http_method = hdrs.METH_POST
                 routes.append(
                     # setting endpoint to None since don't use a Router object
-                    (Route(path=path, methods=[http_method], name=name, endpoint=None), webmethod)  # type: ignore[arg-type]
+                    (Route(path=path, methods=[http_method], name=name, endpoint=None), webmethod)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]  # endpoint is set later
                 )
 
         apis[api] = routes
