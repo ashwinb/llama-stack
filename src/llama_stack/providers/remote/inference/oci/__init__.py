@@ -4,12 +4,12 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from llama_stack_api import InferenceProvider
+from typing import Any
 
 from .config import OCIConfig
 
 
-async def get_adapter_impl(config: OCIConfig, _deps) -> InferenceProvider:
+async def get_adapter_impl(config: OCIConfig, _deps: dict[str, Any]) -> Any:
     from .oci import OCIInferenceAdapter
 
     adapter = OCIInferenceAdapter(config=config)

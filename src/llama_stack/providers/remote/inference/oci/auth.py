@@ -68,7 +68,7 @@ class OciUserPrincipalAuth(HttpxOciAuth):
 
     def __init__(self, config_file: str = DEFAULT_LOCATION, profile_name: str = DEFAULT_PROFILE):
         config = oci.config.from_file(config_file, profile_name)
-        oci.config.validate_config(config)  # type: ignore
+        oci.config.validate_config(config)
         key_content = ""
         with open(config["key_file"]) as f:
             key_content = f.read()
@@ -78,6 +78,6 @@ class OciUserPrincipalAuth(HttpxOciAuth):
             user=config["user"],
             fingerprint=config["fingerprint"],
             private_key_file_location=config.get("key_file"),
-            pass_phrase="none",  # type: ignore
+            pass_phrase="none",
             private_key_content=key_content,
         )
