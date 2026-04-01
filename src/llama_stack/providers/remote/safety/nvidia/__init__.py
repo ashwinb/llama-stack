@@ -10,7 +10,7 @@ from typing import Any
 from .config import NVIDIASafetyConfig
 
 
-async def get_adapter_impl(config: NVIDIASafetyConfig, _deps) -> Any:
+async def get_adapter_impl(config: NVIDIASafetyConfig, _deps: dict[str, Any]) -> Any:
     from .nvidia import NVIDIASafetyAdapter
 
     impl = NVIDIASafetyAdapter(config)

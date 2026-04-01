@@ -16,7 +16,7 @@ class TavilySearchToolProviderDataValidator(BaseModel):
     tavily_search_api_key: SecretStr
 
 
-async def get_adapter_impl(config: TavilySearchToolConfig, _deps):
+async def get_adapter_impl(config: TavilySearchToolConfig, _deps: dict) -> TavilySearchToolRuntimeImpl:
     impl = TavilySearchToolRuntimeImpl(config)
     await impl.initialize()
     return impl
