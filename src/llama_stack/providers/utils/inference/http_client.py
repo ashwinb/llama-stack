@@ -151,7 +151,7 @@ def _extract_client_config(existing_client: httpx.AsyncClient | DefaultAsyncHttp
 
     # Extract from DefaultAsyncHttpxClient
     if isinstance(existing_client, DefaultAsyncHttpxClient):
-        underlying_client = existing_client._client  # type: ignore[union-attr,attr-defined]
+        underlying_client = existing_client._client  # ty: ignore[unresolved-attribute]
         if hasattr(underlying_client, "_auth"):
             config["auth"] = underlying_client._auth  # type: ignore[attr-defined]
         if hasattr(existing_client, "_headers"):
@@ -210,7 +210,7 @@ def _merge_network_config_into_client(
 
         # If original was DefaultAsyncHttpxClient, wrap the new client
         if isinstance(existing_client, DefaultAsyncHttpxClient):
-            return DefaultAsyncHttpxClient(client=new_client, headers=network_kwargs.get("headers"))  # type: ignore[call-arg]
+            return DefaultAsyncHttpxClient(client=new_client, headers=network_kwargs.get("headers"))  # ty: ignore[unknown-argument]
 
         return new_client
     except Exception as e:
