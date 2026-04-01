@@ -8,8 +8,11 @@ from typing import Any
 
 from llama_stack.core.access_control.datatypes import Action
 from llama_stack.core.datatypes import (
+    AccessRule,
+    RoutedProtocol,
     VectorStoreWithOwner,
 )
+from llama_stack.core.store import DistributionRegistry
 from llama_stack.log import get_logger
 
 # Removed VectorStores import to avoid exposing public API
@@ -52,12 +55,12 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
 
     def __init__(
         self,
-        impls_by_provider_id: dict[str, Any],
-        dist_registry: Any,
-        policy: list[Any],
+        impls_by_provider_id: dict[str, RoutedProtocol],
+        dist_registry: DistributionRegistry,
+        policy: list[AccessRule],
     ) -> None:
         super().__init__(impls_by_provider_id, dist_registry, policy)
-        self.vector_io_router = None  # Will be set post-instantiation
+        self.vector_io_router: Any = None  # Will be set post-instantiation
 
     # Internal methods only - no public API exposure
 
@@ -73,7 +76,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         provider_id: str | None = None,
         provider_vector_store_id: str | None = None,
         vector_store_name: str | None = None,
-    ) -> Any:
+    ) -> VectorStoreWithOwner:
         if provider_id is None:
             if len(self.impls_by_provider_id) > 0:
                 provider_id = list(self.impls_by_provider_id.keys())[0]

@@ -32,6 +32,7 @@ from llama_stack_api import (
     ModelType,
     OpenAIChatCompletion,
     OpenAIChatCompletionChunk,
+    OpenAIChatCompletionContentPartImageParam,
     OpenAIChatCompletionRequestWithExtraBody,
     OpenAICompletion,
     OpenAICompletionRequestWithExtraBody,
@@ -158,14 +159,14 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         """
         if metadata := self.embedding_model_metadata.get(identifier):
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # runtime-injected by routing table
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
                 metadata=metadata,
             )
         return Model(
-            provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+            provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # runtime-injected by routing table
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=ModelType.llm,
@@ -290,11 +291,11 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         :return: The provider-specific model ID (e.g., "gpt-4")
         """
         # self.model_store is injected by the distribution system at runtime
-        if not await self.model_store.has_model(model):  # type: ignore[attr-defined]
+        if not await self.model_store.has_model(model):  # ty: ignore[unresolved-attribute]  # runtime-injected by routing table
             return model
 
         # Look up the registered model to get the provider-specific model ID
-        model_obj: Model = await self.model_store.get_model(model)  # type: ignore[attr-defined]
+        model_obj: Model = await self.model_store.get_model(model)  # ty: ignore[unresolved-attribute]  # runtime-injected by routing table
         # provider_resource_id is str | None, but we expect it to be str for OpenAI calls
         if model_obj.provider_resource_id is None:
             raise ValueError(f"Model {model} has no provider_resource_id")
@@ -355,7 +356,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             completion_kwargs["extra_body"] = extra_body
         resp = await self.client.completions.create(**completion_kwargs)
 
-        return await self._maybe_overwrite_id(resp, params.stream)  # type: ignore[no-any-return]
+        return await self._maybe_overwrite_id(resp, params.stream)
 
     async def openai_chat_completion(
         self,
@@ -379,7 +380,9 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             async def _localize_image_url(m: OpenAIMessageParam) -> OpenAIMessageParam:
                 if isinstance(m.content, list):
                     for c in m.content:
-                        if c.type == "image_url" and c.image_url and c.image_url.url and "http" in c.image_url.url:
+                        if not isinstance(c, OpenAIChatCompletionContentPartImageParam):
+                            continue
+                        if c.image_url and c.image_url.url and "http" in c.image_url.url:
                             localize_result = await localize_image_content(c.image_url.url)
                             if localize_result is None:
                                 raise ValueError(
@@ -426,7 +429,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             request_params["extra_body"] = extra_body
         resp = await self.client.chat.completions.create(**request_params)
 
-        return await self._maybe_overwrite_id(resp, params.stream)  # type: ignore[no-any-return]
+        return await self._maybe_overwrite_id(resp, params.stream)
 
     async def openai_embeddings(
         self,
@@ -501,7 +504,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             return model
 
         if not await self.check_model_availability(model.provider_model_id):
-            raise ValueError(f"Model {model.provider_model_id} is not available from provider {self.__provider_id__}")  # type: ignore[attr-defined]
+            raise ValueError(f"Model {model.provider_model_id} is not available from provider {self.__provider_id__}")  # ty: ignore[unresolved-attribute]  # runtime-injected
         return model
 
     async def unregister_model(self, model_id: str) -> None:
@@ -561,9 +564,9 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         :return: True if the model is available dynamically or pre-registered, False otherwise.
         """
         # First check if the model is pre-registered in the model store
-        if hasattr(self, "model_store") and self.model_store:
-            qualified_model = f"{self.__provider_id__}/{model}"  # type: ignore[attr-defined]
-            if await self.model_store.has_model(qualified_model):
+        if hasattr(self, "model_store") and self.model_store:  # runtime-injected by routing table
+            qualified_model = f"{self.__provider_id__}/{model}"  # ty: ignore[unresolved-attribute]  # runtime-injected
+            if await self.model_store.has_model(qualified_model):  # ty: ignore[unresolved-attribute]  # runtime-injected
                 return True
 
         # Then check the provider's dynamic model cache
@@ -579,7 +582,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
     # e.g. model_store, which are not pydantic.
     #
 
-    def _filter_fields(self, **kwargs):
+    def _filter_fields(self, **kwargs: Any) -> dict[str, Any]:
         """Helper to exclude extra fields from serialization."""
         # Exclude any extra fields stored in __pydantic_extra__
         if hasattr(self, "__pydantic_extra__") and self.__pydantic_extra__:
@@ -590,12 +593,12 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             kwargs["exclude"] = exclude
         return kwargs
 
-    def model_dump(self, **kwargs):
+    def model_dump(self, **kwargs: Any) -> dict[str, Any]:
         """Override to exclude extra fields from serialization."""
         kwargs = self._filter_fields(**kwargs)
         return super().model_dump(**kwargs)
 
-    def model_dump_json(self, **kwargs):
+    def model_dump_json(self, **kwargs: Any) -> str:
         """Override to exclude extra fields from JSON serialization."""
         kwargs = self._filter_fields(**kwargs)
         return super().model_dump_json(**kwargs)

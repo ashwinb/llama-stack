@@ -116,7 +116,9 @@ class CommonRoutingTableImpl(RoutingTable):
         self.policy = policy
 
     async def initialize(self) -> None:
-        async def add_objects(objs: list[RoutableObjectWithProvider], provider_id: str, cls) -> None:
+        async def add_objects(
+            objs: list[RoutableObjectWithProvider], provider_id: str, cls: type[RoutableObjectWithProvider] | None
+        ) -> None:
             for obj in objs:
                 if cls is None:
                     obj.provider_id = provider_id
@@ -154,7 +156,7 @@ class CommonRoutingTableImpl(RoutingTable):
     async def refresh(self) -> None:
         pass
 
-    async def get_provider_impl(self, routing_key: str, provider_id: str | None = None) -> Any:
+    async def get_provider_impl(self, routing_key: str, provider_id: str | None = None) -> RoutedProtocol:
         from .benchmarks import BenchmarksRoutingTable
         from .datasets import DatasetsRoutingTable
         from .models import ModelsRoutingTable
@@ -163,7 +165,7 @@ class CommonRoutingTableImpl(RoutingTable):
         from .toolgroups import ToolGroupsRoutingTable
         from .vector_stores import VectorStoresRoutingTable
 
-        def apiname_object():
+        def apiname_object() -> tuple[str, str]:
             if isinstance(self, ModelsRoutingTable):
                 return ("Inference", "model")
             elif isinstance(self, ShieldsRoutingTable):

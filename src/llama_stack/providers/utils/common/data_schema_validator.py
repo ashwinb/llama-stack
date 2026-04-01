@@ -73,7 +73,7 @@ VALID_SCHEMAS_FOR_EVAL = [
 ]
 
 
-def get_valid_schemas(api_str: str):
+def get_valid_schemas(api_str: str) -> list[dict[str, Any]]:
     """Return the valid dataset schemas for the given API.
 
     Args:
@@ -93,7 +93,7 @@ def get_valid_schemas(api_str: str):
 def validate_dataset_schema(
     dataset_schema: dict[str, Any],
     expected_schemas: list[dict[str, Any]],
-):
+) -> None:
     """Validate that a dataset schema matches one of the expected schemas.
 
     Args:
@@ -107,7 +107,7 @@ def validate_dataset_schema(
 def validate_row_schema(
     input_row: dict[str, Any],
     expected_schemas: list[dict[str, Any]],
-):
+) -> None:
     """Validate that an input row contains keys from at least one expected schema.
 
     Args:

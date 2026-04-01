@@ -5,10 +5,10 @@
 # the root directory of this source tree.
 
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from codeshield.cs import CodeShieldScanResult
+    from codeshield.cs import CodeShieldScanResult  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 from llama_stack.providers.utils.inference.prompt_adapter import (
@@ -40,7 +40,7 @@ ALLOWED_CODE_SCANNER_MODEL_IDS = [
 class BuiltinCodeScannerSafetyImpl(Safety):
     """Safety provider that scans generated code for security vulnerabilities using CodeShield."""
 
-    def __init__(self, config: CodeScannerConfig, deps) -> None:
+    def __init__(self, config: CodeScannerConfig, deps: dict[Any, Any]) -> None:
         self.config = config
 
     async def initialize(self) -> None:
@@ -60,9 +60,9 @@ class BuiltinCodeScannerSafetyImpl(Safety):
         if not shield:
             raise ValueError(f"Shield {request.shield_id} not found")
 
-        from codeshield.cs import CodeShield
+        from codeshield.cs import CodeShield  # ty: ignore[unresolved-import]
 
-        text = "\n".join([interleaved_content_as_str(m.content) for m in request.messages])
+        text = "\n".join([interleaved_content_as_str(m.content) for m in request.messages])  # ty: ignore[invalid-argument-type]  # OpenAI content types handled at runtime
         log.info(f"Running CodeScannerShield on {text[50:]}")
         result = await CodeShield.scan_code(text)
 
@@ -108,7 +108,7 @@ class BuiltinCodeScannerSafetyImpl(Safety):
         inputs = request.input if isinstance(request.input, list) else [request.input]
         results = []
 
-        from codeshield.cs import CodeShield
+        from codeshield.cs import CodeShield  # ty: ignore[unresolved-import]
 
         for text_input in inputs:
             log.info(f"Running CodeScannerShield moderation on input: {text_input[:100]}...")

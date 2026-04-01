@@ -38,6 +38,7 @@ from llama_stack_api import (
     OpenAIResponseInputMessageContentImage,
     OpenAIResponseInputMessageContentText,
     OpenAIResponseInputTool,
+    OpenAIResponseInputToolFunction,
     OpenAIResponseMCPApprovalRequest,
     OpenAIResponseMCPApprovalResponse,
     OpenAIResponseMessage,
@@ -371,7 +372,7 @@ async def convert_response_input_to_chat_messages(
                         if last_user_content == content:
                             continue  # Skip duplicate user message
                 # Dynamic message type call - different message types have different content expectations
-                messages.append(message_type(content=content))  # type: ignore[call-arg,arg-type]
+                messages.append(message_type(content=content))  # ty: ignore[invalid-argument-type]  # Dynamic dispatch; content types vary by role
         if len(tool_call_results):
             # Check if unpaired function_call_outputs reference function_calls from previous messages
             if previous_messages:
@@ -419,7 +420,7 @@ async def convert_response_text_to_chat_response_format(
     if text.format["type"] == "json_schema":
         # Assert name exists for json_schema format
         assert text.format.get("name"), "json_schema format requires a name"
-        schema_name: str = text.format["name"]  # type: ignore[assignment]
+        schema_name: str = text.format["name"]  # ty: ignore[invalid-assignment]  # asserted not None above
         return OpenAIResponseFormatJSONSchema(
             json_schema=OpenAIJSONSchema(name=schema_name, schema=text.format["schema"])
         )
@@ -434,7 +435,7 @@ async def get_message_type_by_role(role: str) -> type[OpenAIMessageParam] | None
         "assistant": OpenAIAssistantMessageParam,
         "developer": OpenAIDeveloperMessageParam,
     }
-    return role_to_type.get(role)  # type: ignore[return-value]  # Pydantic models use ModelMetaclass
+    return role_to_type.get(role)
 
 
 def _extract_citations_from_text(
@@ -500,7 +501,7 @@ def is_function_tool_call(
     if not tool_call.function:
         return False
     for t in tools:
-        if t.type == "function" and t.name == tool_call.function.name:
+        if isinstance(t, OpenAIResponseInputToolFunction) and t.name == tool_call.function.name:
             return True
     return False
 
@@ -517,7 +518,7 @@ async def run_guardrails(safety_api: Safety | None, messages: str, guardrail_ids
     # Look up shields to get their provider_resource_id (actual model ID)
     model_ids = []
     # TODO: list_shields not in Safety interface but available at runtime via API routing
-    shields_list = await safety_api.routing_table.list_shields()  # type: ignore[attr-defined]
+    shields_list = await safety_api.routing_table.list_shields()  # ty: ignore[unresolved-attribute]  # routing_table injected at runtime
 
     for guardrail_id in guardrail_ids:
         matching_shields = [shield for shield in shields_list.data if shield.identifier == guardrail_id]
@@ -552,7 +553,7 @@ async def run_guardrails(safety_api: Safety | None, messages: str, guardrail_ids
     return None
 
 
-def extract_guardrail_ids(guardrails: list | None) -> list[str]:
+def extract_guardrail_ids(guardrails: list[str | ResponseGuardrailSpec] | None) -> list[str]:
     """Extract guardrail IDs from guardrails parameter, handling both string IDs and ResponseGuardrailSpec objects."""
     if not guardrails:
         return []
@@ -574,7 +575,7 @@ def convert_mcp_tool_choice(
     server_label: str | None = None,
     server_label_to_tools: dict[str, list[str]] | None = None,
     tool_name: str | None = None,
-) -> dict[str, str] | list[dict[str, str]]:
+) -> dict[str, str | dict[str, str]] | list[dict[str, str | dict[str, str]]] | None:
     """Convert a responses tool choice of type mcp to a chat completions compatible function tool choice."""
 
     if tool_name:
@@ -589,6 +590,8 @@ def convert_mcp_tool_choice(
         tool_names = server_label_to_tools.get(server_label, [])
         if not tool_names:
             return None
-        matching_tools = [{"type": "function", "function": {"name": tool_name}} for tool_name in tool_names]
+        matching_tools: list[dict[str, str | dict[str, str]]] = [
+            {"type": "function", "function": {"name": tn}} for tn in tool_names
+        ]
         return matching_tools
     return []

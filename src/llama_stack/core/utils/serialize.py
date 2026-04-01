@@ -7,14 +7,15 @@
 import json
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 
 class EnumEncoder(json.JSONEncoder):
     """JSON encoder that serializes Enum values and datetime objects."""
 
-    def default(self, obj):
-        if isinstance(obj, Enum):
-            return obj.value
-        elif isinstance(obj, datetime):
-            return obj.isoformat()
-        return super().default(obj)
+    def default(self, o: Any) -> Any:
+        if isinstance(o, Enum):
+            return o.value
+        elif isinstance(o, datetime):
+            return o.isoformat()
+        return super().default(o)
