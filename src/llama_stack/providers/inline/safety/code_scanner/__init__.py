@@ -9,7 +9,7 @@ from typing import Any
 from .config import CodeScannerConfig
 
 
-async def get_provider_impl(config: CodeScannerConfig, deps: dict[str, Any]):
+async def get_provider_impl(config: CodeScannerConfig, deps: dict[str, Any]) -> Any:
     from .code_scanner import BuiltinCodeScannerSafetyImpl
 
     impl = BuiltinCodeScannerSafetyImpl(config, deps)
