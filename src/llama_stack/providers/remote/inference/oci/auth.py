@@ -8,9 +8,9 @@ from collections.abc import Generator, Mapping
 from typing import Any, override
 
 import httpx
-import oci
+import oci  # ty: ignore[unresolved-import]
 import requests
-from oci.config import DEFAULT_LOCATION, DEFAULT_PROFILE
+from oci.config import DEFAULT_LOCATION, DEFAULT_PROFILE  # ty: ignore[unresolved-import]
 
 OciAuthSigner = type[oci.signer.AbstractBaseSigner]
 
@@ -48,7 +48,7 @@ class HttpxOciAuth(httpx.Auth):
         prepared_request = req.prepare()
 
         # Sign the request using the OCI Signer
-        self.signer.do_request_sign(prepared_request)  # type: ignore
+        self.signer.do_request_sign(prepared_request)
 
         # Update the original HTTPX request with the signed headers
         request.headers.update(prepared_request.headers)

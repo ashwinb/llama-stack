@@ -9,9 +9,9 @@ from collections.abc import Iterable
 from typing import Any
 
 import httpx
-import oci
-from oci.generative_ai.generative_ai_client import GenerativeAiClient
-from oci.generative_ai.models import ModelCollection
+import oci  # ty: ignore[unresolved-import]
+from oci.generative_ai.generative_ai_client import GenerativeAiClient  # ty: ignore[unresolved-import]
+from oci.generative_ai.models import ModelCollection  # ty: ignore[unresolved-import]
 from openai import DefaultAsyncHttpxClient
 
 from llama_stack.log import get_logger
