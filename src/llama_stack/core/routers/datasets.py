@@ -4,8 +4,9 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import Any
+from typing import Any, cast
 
+from llama_stack.core.routing_tables.common import CommonRoutingTableImpl
 from llama_stack.log import get_logger
 from llama_stack_api import (
     AppendRowsParams,
@@ -14,7 +15,6 @@ from llama_stack_api import (
     DataSource,
     IterRowsRequest,
     PaginatedResponse,
-    RoutingTable,
 )
 
 logger = get_logger(name=__name__, category="core::routers")
@@ -25,7 +25,7 @@ class DatasetIORouter(DatasetIO):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: CommonRoutingTableImpl,
     ) -> None:
         logger.debug("Initializing DatasetIORouter")
         self.routing_table = routing_table
@@ -52,7 +52,7 @@ class DatasetIORouter(DatasetIO):
             metadata=metadata,
             dataset_id=dataset_id,
         )
-        await self.routing_table.register_dataset(
+        await self.routing_table.register_dataset(  # ty:ignore[unresolved-attribute]
             purpose=purpose,
             source=source,
             metadata=metadata,
@@ -66,17 +66,17 @@ class DatasetIORouter(DatasetIO):
             start_index=request.start_index,
             limit=request.limit,
         )
-        provider = await self.routing_table.get_provider_impl(request.dataset_id)
+        provider = cast(DatasetIO, await self.routing_table.get_provider_impl(request.dataset_id))
         return await provider.iterrows(
-            dataset_id=request.dataset_id,
-            start_index=request.start_index,
-            limit=request.limit,
-        )
+            dataset_id=request.dataset_id,  # ty:ignore[unknown-argument]
+            start_index=request.start_index,  # ty:ignore[unknown-argument]
+            limit=request.limit,  # ty:ignore[unknown-argument]
+        )  # ty:ignore[missing-argument]
 
     async def append_rows(self, params: AppendRowsParams) -> None:
         logger.debug("DatasetIORouter.append_rows", dataset_id=params.dataset_id, rows_count=len(params.rows))
-        provider = await self.routing_table.get_provider_impl(params.dataset_id)
+        provider = cast(DatasetIO, await self.routing_table.get_provider_impl(params.dataset_id))
         return await provider.append_rows(
-            dataset_id=params.dataset_id,
-            rows=params.rows,
-        )
+            dataset_id=params.dataset_id,  # ty:ignore[unknown-argument]
+            rows=params.rows,  # ty:ignore[unknown-argument]
+        )  # ty:ignore[missing-argument]

@@ -4,15 +4,17 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
+from typing import cast
+
 from opentelemetry import trace
 
 from llama_stack.core.datatypes import SafetyConfig
+from llama_stack.core.routing_tables.common import CommonRoutingTableImpl
 from llama_stack.log import get_logger
 from llama_stack.telemetry.helpers import safety_request_span_attributes, safety_span_name
 from llama_stack_api import (
     ModerationObject,
     RegisterShieldRequest,
-    RoutingTable,
     RunModerationRequest,
     RunShieldRequest,
     RunShieldResponse,
@@ -30,7 +32,7 @@ class SafetyRouter(Safety):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: CommonRoutingTableImpl,
         safety_config: SafetyConfig | None = None,
     ) -> None:
         logger.debug("Initializing SafetyRouter")
@@ -47,22 +49,22 @@ class SafetyRouter(Safety):
 
     async def register_shield(self, request: RegisterShieldRequest) -> Shield:
         logger.debug("SafetyRouter.register_shield", shield_id=request.shield_id)
-        return await self.routing_table.register_shield(request)
+        return await self.routing_table.register_shield(request)  # ty:ignore[unresolved-attribute]
 
     async def unregister_shield(self, identifier: str) -> None:
         logger.debug("SafetyRouter.unregister_shield", identifier=identifier)
-        return await self.routing_table.unregister_shield(UnregisterShieldRequest(identifier=identifier))
+        return await self.routing_table.unregister_shield(UnregisterShieldRequest(identifier=identifier))  # ty:ignore[unresolved-attribute]
 
     async def run_shield(self, request: RunShieldRequest) -> RunShieldResponse:
         with tracer.start_as_current_span(name=safety_span_name(request.shield_id)):
             logger.debug("SafetyRouter.run_shield", shield_id=request.shield_id)
-            provider = await self.routing_table.get_provider_impl(request.shield_id)
+            provider = cast(Safety, await self.routing_table.get_provider_impl(request.shield_id))
             response = await provider.run_shield(request)
             safety_request_span_attributes(request.shield_id, request.messages, response)
         return response
 
     async def run_moderation(self, request: RunModerationRequest) -> ModerationObject:
-        list_shields_response = await self.routing_table.list_shields()
+        list_shields_response = await self.routing_table.list_shields()  # ty:ignore[unresolved-attribute]
         shields = list_shields_response.data
 
         selected_shield: Shield | None = None
@@ -97,7 +99,7 @@ class SafetyRouter(Safety):
 
         shield_id = selected_shield.identifier
         logger.debug("SafetyRouter.run_moderation", shield_id=shield_id)
-        provider = await self.routing_table.get_provider_impl(shield_id)
+        provider = cast(Safety, await self.routing_table.get_provider_impl(shield_id))
 
         provider_request = RunModerationRequest(input=request.input, model=provider_model)
         return await provider.run_moderation(provider_request)

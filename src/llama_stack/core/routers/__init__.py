@@ -11,6 +11,7 @@ from llama_stack.core.datatypes import (
     RoutedProtocol,
     StackConfig,
 )
+from llama_stack.core.routing_tables.common import CommonRoutingTableImpl
 from llama_stack.core.store import DistributionRegistry
 from llama_stack.providers.utils.inference.inference_store import InferenceStore
 from llama_stack_api import Api, RoutingTable
@@ -19,10 +20,10 @@ from llama_stack_api import Api, RoutingTable
 async def get_routing_table_impl(
     api: Api,
     impls_by_provider_id: dict[str, RoutedProtocol],
-    _deps,
+    _deps: dict[str, Any],
     dist_registry: DistributionRegistry,
     policy: list[AccessRule],
-) -> Any:
+) -> CommonRoutingTableImpl:
     from ..routing_tables.benchmarks import BenchmarksRoutingTable
     from ..routing_tables.datasets import DatasetsRoutingTable
     from ..routing_tables.models import ModelsRoutingTable
@@ -51,8 +52,8 @@ async def get_routing_table_impl(
 
 
 async def get_auto_router_impl(
-    api: Api, routing_table: RoutingTable, deps: dict[str, Any], run_config: StackConfig, policy: list[AccessRule]
-) -> Any:
+    api: Api, routing_table: CommonRoutingTableImpl, deps: dict[Api, Any], run_config: StackConfig, policy: list[AccessRule]
+) -> RoutedProtocol:
     from .datasets import DatasetIORouter
     from .eval_scoring import EvalRouter, ScoringRouter
     from .inference import InferenceRouter
@@ -91,7 +92,8 @@ async def get_auto_router_impl(
     elif api == Api.safety:
         api_to_dep_impl["safety_config"] = run_config.safety
 
-    impl = api_to_routers[api.value](routing_table, **api_to_dep_impl)
+    router_cls = api_to_routers[api.value]
+    impl = router_cls(routing_table, **api_to_dep_impl)  # ty: ignore[arg-type]  # routing_table subclass resolved at runtime  # ty:ignore[ignore-comment-unknown-rule, invalid-argument-type]
 
     await impl.initialize()
     return impl

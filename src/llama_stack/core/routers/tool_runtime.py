@@ -6,7 +6,7 @@
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, cast
 
 from llama_stack.log import get_logger
 from llama_stack.telemetry.tool_runtime_metrics import (
@@ -21,7 +21,7 @@ from llama_stack_api import (
     ToolRuntime,
 )
 
-from ..routing_tables.toolgroups import ToolGroupsRoutingTable
+from llama_stack.core.routing_tables.toolgroups import ToolGroupsRoutingTable
 
 logger = get_logger(name=__name__, category="core::routers")
 
@@ -51,7 +51,7 @@ class ToolRuntimeRouter(ToolRuntime):
 
         try:
             # Get provider and tool metadata for metrics
-            provider = await self.routing_table.get_provider_impl(tool_name)
+            provider = cast(ToolRuntime, await self.routing_table.get_provider_impl(tool_name))
 
             # Try to get tool group ID from the routing table cache
             tool_group = None

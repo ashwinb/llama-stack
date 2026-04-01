@@ -3,8 +3,9 @@
 #
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
-from typing import Any
+from typing import Any, cast
 
+from llama_stack.core.routing_tables.common import CommonRoutingTableImpl
 from llama_stack.log import get_logger
 from llama_stack_api import (
     BenchmarkConfig,
@@ -15,7 +16,6 @@ from llama_stack_api import (
     JobCancelRequest,
     JobResultRequest,
     JobStatusRequest,
-    RoutingTable,
     RunEvalRequest,
     ScoreBatchRequest,
     ScoreBatchResponse,
@@ -37,7 +37,7 @@ class ScoringRouter(Scoring):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: CommonRoutingTableImpl,
     ) -> None:
         logger.debug("Initializing ScoringRouter")
         self.routing_table = routing_table
@@ -57,7 +57,7 @@ class ScoringRouter(Scoring):
         logger.debug("ScoringRouter.score_batch", dataset_id=request.dataset_id)
         res = {}
         for fn_identifier in request.scoring_functions.keys():
-            provider = await self.routing_table.get_provider_impl(fn_identifier)
+            provider = cast(Scoring, await self.routing_table.get_provider_impl(fn_identifier))
             # Create a request for this specific scoring function
             single_fn_request = ScoreBatchRequest(
                 dataset_id=request.dataset_id,
@@ -86,7 +86,7 @@ class ScoringRouter(Scoring):
         res = {}
         # look up and map each scoring function to its provider impl
         for fn_identifier in request.scoring_functions.keys():
-            provider = await self.routing_table.get_provider_impl(fn_identifier)
+            provider = cast(Scoring, await self.routing_table.get_provider_impl(fn_identifier))
             # Create a request for this specific scoring function
             single_fn_request = ScoreRequest(
                 input_rows=request.input_rows,
@@ -103,7 +103,7 @@ class EvalRouter(Eval):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: CommonRoutingTableImpl,
     ) -> None:
         logger.debug("Initializing EvalRouter")
         self.routing_table = routing_table
@@ -140,7 +140,7 @@ class EvalRouter(Eval):
             request, benchmark_id=benchmark_id, benchmark_config=benchmark_config
         )
         logger.debug("EvalRouter.run_eval", benchmark_id=resolved_request.benchmark_id)
-        provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
+        provider = cast(Eval, await self.routing_table.get_provider_impl(resolved_request.benchmark_id))
         return await provider.run_eval(resolved_request)
 
     async def evaluate_rows(
@@ -179,7 +179,7 @@ class EvalRouter(Eval):
             benchmark_id=resolved_request.benchmark_id,
             input_rows_count=len(resolved_request.input_rows),
         )
-        provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
+        provider = cast(Eval, await self.routing_table.get_provider_impl(resolved_request.benchmark_id))
         return await provider.evaluate_rows(resolved_request)
 
     async def job_status(
@@ -206,7 +206,7 @@ class EvalRouter(Eval):
         logger.debug(
             "EvalRouter.job_status", benchmark_id=resolved_request.benchmark_id, job_id=resolved_request.job_id
         )
-        provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
+        provider = cast(Eval, await self.routing_table.get_provider_impl(resolved_request.benchmark_id))
         return await provider.job_status(resolved_request)
 
     async def job_cancel(
@@ -233,7 +233,7 @@ class EvalRouter(Eval):
         logger.debug(
             "EvalRouter.job_cancel", benchmark_id=resolved_request.benchmark_id, job_id=resolved_request.job_id
         )
-        provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
+        provider = cast(Eval, await self.routing_table.get_provider_impl(resolved_request.benchmark_id))
         await provider.job_cancel(resolved_request)
 
     async def job_result(
@@ -260,5 +260,5 @@ class EvalRouter(Eval):
         logger.debug(
             "EvalRouter.job_result", benchmark_id=resolved_request.benchmark_id, job_id=resolved_request.job_id
         )
-        provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
+        provider = cast(Eval, await self.routing_table.get_provider_impl(resolved_request.benchmark_id))
         return await provider.job_result(resolved_request)

@@ -12,6 +12,7 @@ from typing import Annotated
 from fastapi import Body
 
 from llama_stack.core.datatypes import VectorStoresConfig
+from llama_stack.core.routing_tables.vector_stores import VectorStoresRoutingTable
 from llama_stack.log import get_logger
 from llama_stack.providers.utils.vector_io.filters import parse_filter
 from llama_stack.telemetry.vector_io_metrics import (
@@ -70,7 +71,7 @@ class VectorIORouter(VectorIO):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: VectorStoresRoutingTable,
         vector_stores_config: VectorStoresConfig | None = None,
         inference_api: Inference | None = None,
     ) -> None:
@@ -138,7 +139,7 @@ class VectorIORouter(VectorIO):
 
         try:
             response = await self.inference_api.openai_chat_completion(request)
-            content = response.choices[0].message.content
+            content = response.choices[0].message.content  # ty:ignore[unresolved-attribute]
             if content is None:
                 logger.error("LLM returned None content for query rewriting. Model", model_id=model_id)
                 raise RuntimeError("Query rewrite failed due to an internal error")
@@ -153,8 +154,8 @@ class VectorIORouter(VectorIO):
         all_models = await self.routing_table.get_all_with_type("model")
 
         for model in all_models:
-            if model.identifier == embedding_model_id and model.model_type == ModelType.embedding:
-                dimension = model.metadata.get("embedding_dimension")
+            if model.identifier == embedding_model_id and model.model_type == ModelType.embedding:  # ty:ignore[unresolved-attribute]
+                dimension = model.metadata.get("embedding_dimension")  # ty:ignore[unresolved-attribute]
                 if dimension is None:
                     raise ValueError(f"Embedding model '{embedding_model_id}' has no embedding_dimension in metadata")
                 return int(dimension)
@@ -293,8 +294,8 @@ class VectorIORouter(VectorIO):
             model = await self.routing_table.get_object_by_identifier("model", embedding_model)
             if model is None:
                 raise ModelNotFoundError(embedding_model)
-            if model.model_type != ModelType.embedding:
-                raise ModelTypeError(embedding_model, model.model_type, ModelType.embedding)
+            if model.model_type != ModelType.embedding:  # ty:ignore[unresolved-attribute]
+                raise ModelTypeError(embedding_model, model.model_type, ModelType.embedding)  # ty:ignore[unresolved-attribute]
 
         # Auto-select provider if not specified
         if provider_id is None:
@@ -359,7 +360,7 @@ class VectorIORouter(VectorIO):
                 )
             )
 
-        result = await provider.openai_create_vector_store(params)
+        result = await provider.openai_create_vector_store(params)  # ty:ignore[unresolved-attribute]
         vector_stores_total.add(
             1,
             create_vector_metric_attributes(provider=provider_id, operation="create"),
@@ -407,7 +408,7 @@ class VectorIORouter(VectorIO):
         limited_stores = all_stores[:limit]
 
         # Determine pagination info
-        has_more = len(all_stores) > limit
+        has_more = len(all_stores) > limit  # ty:ignore[unsupported-operator]
         first_id = limited_stores[0].id if limited_stores else None
         last_id = limited_stores[-1].id if limited_stores else None
 
@@ -674,7 +675,7 @@ class VectorIORouter(VectorIO):
                 # check if the provider has a health method
                 if not hasattr(impl, "health"):
                     continue
-                health = await asyncio.wait_for(impl.health(), timeout=timeout)
+                health = await asyncio.wait_for(impl.health(), timeout=timeout)  # ty:ignore[call-non-callable]
                 health_statuses[provider_id] = health
             except TimeoutError:
                 health_statuses[provider_id] = HealthResponse(
