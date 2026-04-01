@@ -18,6 +18,7 @@ from llama_stack_api import (
     URL,
     ListToolDefsResponse,
     ListToolsRequest,
+    ToolInvocationResult,
     ToolRuntime,
 )
 
@@ -44,7 +45,7 @@ class ToolRuntimeRouter(ToolRuntime):
         logger.debug("ToolRuntimeRouter.shutdown")
         pass
 
-    async def invoke_tool(self, tool_name: str, kwargs: dict[str, Any], authorization: str | None = None) -> Any:
+    async def invoke_tool(self, tool_name: str, kwargs: dict[str, Any], authorization: str | None = None) -> ToolInvocationResult:
         logger.debug("ToolRuntimeRouter.invoke_tool", tool_name=tool_name)
         start_time = time.perf_counter()
         metric_attrs = None

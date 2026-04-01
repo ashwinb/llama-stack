@@ -121,20 +121,22 @@ class ToolContext(BaseModel):
             matched: dict[str, OpenAIResponseInputToolMCP] = {}
             # Mypy confuses OpenAIResponseInputTool (Input union) with OpenAIResponseTool (output union)
             # which differ only in MCP type (InputToolMCP vs ToolMCP). Code is correct.
-            for tool in cast(list[OpenAIResponseInputTool], self.current_tools):  # type: ignore[assignment]
+            for tool in cast(list[OpenAIResponseInputTool], self.current_tools):
                 if isinstance(tool, OpenAIResponseInputToolMCP) and tool.server_label in previous_tools_by_label:
                     previous_tool = previous_tools_by_label[tool.server_label]
                     if previous_tool.allowed_tools == tool.allowed_tools:
                         matched[tool.server_label] = tool
                     else:
-                        tools_to_process.append(tool)  # type: ignore[arg-type]
+                        tools_to_process.append(tool)
                 else:
-                    tools_to_process.append(tool)  # type: ignore[arg-type]
+                    tools_to_process.append(tool)
             # tools that are not the same or were not previously defined need to be processed:
             self.tools_to_process = tools_to_process
             # for all matched definitions, get the mcp_list_tools objects from the previous output:
             self.previous_tool_listings = [
-                obj for obj in previous_response.output if obj.type == "mcp_list_tools" and obj.server_label in matched
+                obj
+                for obj in previous_response.output
+                if isinstance(obj, OpenAIResponseOutputMessageMCPListTools) and obj.server_label in matched
             ]
             # reconstruct the tool to server mappings that can be reused:
             for listing in self.previous_tool_listings:
@@ -210,9 +212,11 @@ class ChatCompletionContext(BaseModel):
             extra_body=extra_body,
         )
         if not isinstance(inputs, str):
-            self.approval_requests = [input for input in inputs if input.type == "mcp_approval_request"]
+            self.approval_requests = [input for input in inputs if isinstance(input, OpenAIResponseMCPApprovalRequest)]
             self.approval_responses = {
-                input.approval_request_id: input for input in inputs if input.type == "mcp_approval_response"
+                input.approval_request_id: input
+                for input in inputs
+                if isinstance(input, OpenAIResponseMCPApprovalResponse)
             }
 
     def approval_response(self, tool_name: str, arguments: str) -> OpenAIResponseMCPApprovalResponse | None:

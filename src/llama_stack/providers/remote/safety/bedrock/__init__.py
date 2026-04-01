@@ -7,10 +7,12 @@
 
 from typing import Any
 
+from llama_stack_api import Api
+
 from .config import BedrockSafetyConfig
 
 
-async def get_adapter_impl(config: BedrockSafetyConfig, _deps) -> Any:
+async def get_adapter_impl(config: BedrockSafetyConfig, _deps: dict[Api, Any]) -> Any:
     from .bedrock import BedrockSafetyAdapter
 
     impl = BedrockSafetyAdapter(config)

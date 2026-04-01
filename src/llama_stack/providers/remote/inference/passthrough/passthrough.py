@@ -32,6 +32,8 @@ logger = get_logger(__name__, category="inference")
 class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
     """Inference adapter that forwards requests to any OpenAI-compatible endpoint."""
 
+    __provider_id__: str  # injected at runtime by the routing table
+
     def __init__(self, config: PassthroughImplConfig) -> None:
         self.config = config
 
@@ -60,11 +62,11 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
             custom_metadata = getattr(model_data, "custom_metadata", {}) or {}
 
             # Prefix identifier with provider ID for local registry
-            local_identifier = f"{self.__provider_id__}/{downstream_model_id}"  # ty: ignore[unresolved-attribute]  # runtime-injected by routing table
+            local_identifier = f"{self.__provider_id__}/{downstream_model_id}"
 
             model = Model(
                 identifier=local_identifier,
-                provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # runtime-injected by routing table
+                provider_id=self.__provider_id__,
                 provider_resource_id=downstream_model_id,
                 model_type=custom_metadata.get("model_type", "llm"),
                 metadata=custom_metadata,
@@ -180,4 +182,4 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         client = self._get_openai_client()
         request_params = params.model_dump(exclude_none=True)
         response = await client.embeddings.create(**request_params)
-        return response  # type: ignore
+        return response  # ty: ignore[invalid-return-type]

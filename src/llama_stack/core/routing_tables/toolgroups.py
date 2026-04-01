@@ -88,7 +88,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
 
         return ListToolDefsResponse(data=all_tools)
 
-    async def _index_tools(self, toolgroup: ToolGroup, authorization: str | None = None):
+    async def _index_tools(self, toolgroup: ToolGroup, authorization: str | None = None) -> None:
         provider_impl = await super().get_provider_impl(toolgroup.identifier, toolgroup.provider_id)
         tooldefs_response = await provider_impl.list_runtime_tools(
             toolgroup.identifier, toolgroup.mcp_endpoint, authorization=authorization

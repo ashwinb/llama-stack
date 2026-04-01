@@ -56,8 +56,8 @@ class ToolExecutor:
         tool_groups_api: ToolGroups,
         tool_runtime_api: ToolRuntime,
         vector_io_api: VectorIO,
-        vector_stores_config=None,
-        mcp_session_manager=None,
+        vector_stores_config: Any = None,
+        mcp_session_manager: Any = None,
     ):
         self.tool_groups_api = tool_groups_api
         self.tool_runtime_api = tool_runtime_api
@@ -236,7 +236,7 @@ class ToolExecutor:
 
         # Cast to proper InterleavedContent type (list invariance)
         return ToolInvocationResult(
-            content=content_items,  # type: ignore[arg-type]
+            content=content_items,
             metadata={
                 "document_ids": [r.file_id for r in search_results],
                 "chunks": [r.content[0].text if r.content else "" for r in search_results],
@@ -315,7 +315,7 @@ class ToolExecutor:
     async def _execute_tool(
         self,
         function_name: str,
-        tool_kwargs: dict,
+        tool_kwargs: dict[str, Any],
         ctx: ChatCompletionContext,
         mcp_tool_to_server: dict[str, OpenAIResponseInputToolMCP] | None = None,
     ) -> tuple[Exception | None, Any]:
@@ -328,9 +328,11 @@ class ToolExecutor:
                 from llama_stack.providers.utils.tools.mcp import invoke_mcp_tool
 
                 mcp_tool = mcp_tool_to_server[function_name]
-                attributes = {
+                assert mcp_tool.server_url is not None, "MCP tool must have server_url"
+                mcp_server_url: str = mcp_tool.server_url
+                attributes: dict[str, str] = {
                     "server_label": mcp_tool.server_label,
-                    "server_url": mcp_tool.server_url,
+                    "server_url": mcp_server_url,
                     "tool_name": function_name,
                 }
                 # TODO: follow semantic conventions for Open Telemetry tool spans
@@ -338,7 +340,7 @@ class ToolExecutor:
                 with tracer.start_as_current_span("invoke_mcp_tool", attributes=attributes):
                     # Pass session_manager for session reuse within request (fix for #4452)
                     result = await invoke_mcp_tool(
-                        endpoint=mcp_tool.server_url,
+                        endpoint=mcp_server_url,
                         tool_name=function_name,
                         kwargs=tool_kwargs,
                         headers=mcp_tool.headers,
@@ -421,16 +423,16 @@ class ToolExecutor:
 
     async def _build_result_messages(
         self,
-        function,
+        function: Any,
         tool_call_id: str,
         item_id: str,
-        tool_kwargs: dict,
+        tool_kwargs: dict[str, Any],
         ctx: ChatCompletionContext,
         error_exc: Exception | None,
         result: Any,
         has_error: bool,
         mcp_tool_to_server: dict[str, OpenAIResponseInputToolMCP] | None = None,
-    ) -> tuple[Any, Any]:
+    ) -> tuple[Any, OpenAIToolMessageParam | None]:
         """Build output and input messages from tool execution results."""
         from llama_stack.providers.utils.inference.prompt_adapter import (
             interleaved_content_as_str,
@@ -520,7 +522,7 @@ class ToolExecutor:
                 raise ValueError(f"Unknown result content type: {type(result_content)}")
             # OpenAIToolMessageParam accepts str | list[TextParam] but we may have images
             # This is runtime-safe as the API accepts it, but mypy complains
-            input_message = OpenAIToolMessageParam(content=msg_content, tool_call_id=tool_call_id)  # type: ignore[arg-type]
+            input_message = OpenAIToolMessageParam(content=msg_content, tool_call_id=tool_call_id)
         else:
             text = str(error_exc) if error_exc else "Tool execution failed"
             input_message = OpenAIToolMessageParam(content=text, tool_call_id=tool_call_id)
