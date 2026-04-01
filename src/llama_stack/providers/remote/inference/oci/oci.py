@@ -78,15 +78,17 @@ class OCIInferenceAdapter(OpenAIMixin):
             return oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
         return None
 
-    def _get_oci_config(self) -> dict:
+    def _get_oci_config(self) -> dict[str, Any]:
         if self.config.oci_auth_type == OCI_AUTH_TYPE_INSTANCE_PRINCIPAL:
-            config = {"region": self.config.oci_region}
+            config: dict[str, Any] = {"region": self.config.oci_region}
         elif self.config.oci_auth_type == OCI_AUTH_TYPE_CONFIG_FILE:
             config = oci.config.from_file(self.config.oci_config_file_path, self.config.oci_config_profile)
             if not config.get("region"):
                 raise ValueError(
                     "Region not specified in config. Please specify in config or with OCI_REGION env variable."
                 )
+        else:
+            raise ValueError(f"Invalid OCI authentication type: {self.config.oci_auth_type}")
 
         return config
 
@@ -152,13 +154,13 @@ class OCIInferenceAdapter(OpenAIMixin):
         """
         if identifier in self.embedding_models:
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # injected at runtime by routing table
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
             )
         return Model(
-            provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+            provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # injected at runtime by routing table
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=ModelType.llm,
