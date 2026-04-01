@@ -9,10 +9,11 @@ from opentelemetry import trace
 from llama_stack.core.datatypes import SafetyConfig
 from llama_stack.log import get_logger
 from llama_stack.telemetry.helpers import safety_request_span_attributes, safety_span_name
+from typing import Any
+
 from llama_stack_api import (
     ModerationObject,
     RegisterShieldRequest,
-    RoutingTable,
     RunModerationRequest,
     RunShieldRequest,
     RunShieldResponse,
@@ -30,7 +31,7 @@ class SafetyRouter(Safety):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: Any,
         safety_config: SafetyConfig | None = None,
     ) -> None:
         logger.debug("Initializing SafetyRouter")

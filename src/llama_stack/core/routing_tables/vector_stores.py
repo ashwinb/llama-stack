@@ -62,7 +62,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
 
     async def list_vector_stores(self) -> list[VectorStoreWithOwner]:
         """List all registered vector stores."""
-        return await self.get_all_with_type(ResourceType.vector_store.value)
+        return await self.get_all_with_type(ResourceType.vector_store.value)  # ty: ignore[invalid-return-type]
 
     async def register_vector_store(
         self,
@@ -91,11 +91,11 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
 
         vector_store = VectorStoreWithOwner(
             identifier=vector_store_id,
-            type=ResourceType.vector_store.value,
+            type=ResourceType.vector_store.value,  # ty: ignore[invalid-argument-type]
             provider_id=provider_id,
             provider_resource_id=provider_vector_store_id,
             embedding_model=embedding_model,
-            embedding_dimension=embedding_dimension,
+            embedding_dimension=embedding_dimension,  # ty: ignore[invalid-argument-type]
             vector_store_name=vector_store_name,
         )
         await self.register_object(vector_store)

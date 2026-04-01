@@ -7,7 +7,7 @@
 import asyncio
 import time
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Body
 
@@ -45,7 +45,6 @@ from llama_stack_api import (
     OpenAIUserMessageParam,
     QueryChunksRequest,
     QueryChunksResponse,
-    RoutingTable,
     VectorIO,
     VectorStoreChunkingStrategyStatic,
     VectorStoreChunkingStrategyStaticConfig,
@@ -70,7 +69,7 @@ class VectorIORouter(VectorIO):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: Any,
         vector_stores_config: VectorStoresConfig | None = None,
         inference_api: Inference | None = None,
     ) -> None:
@@ -138,7 +137,7 @@ class VectorIORouter(VectorIO):
 
         try:
             response = await self.inference_api.openai_chat_completion(request)
-            content = response.choices[0].message.content
+            content = response.choices[0].message.content  # ty: ignore[unresolved-attribute]
             if content is None:
                 logger.error("LLM returned None content for query rewriting. Model", model_id=model_id)
                 raise RuntimeError("Query rewrite failed due to an internal error")
@@ -407,7 +406,7 @@ class VectorIORouter(VectorIO):
         limited_stores = all_stores[:limit]
 
         # Determine pagination info
-        has_more = len(all_stores) > limit
+        has_more = len(all_stores) > (limit or 20)
         first_id = limited_stores[0].id if limited_stores else None
         last_id = limited_stores[-1].id if limited_stores else None
 

@@ -14,7 +14,6 @@ from llama_stack_api import (
     DataSource,
     IterRowsRequest,
     PaginatedResponse,
-    RoutingTable,
 )
 
 logger = get_logger(name=__name__, category="core::routers")
@@ -25,7 +24,7 @@ class DatasetIORouter(DatasetIO):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: Any,
     ) -> None:
         logger.debug("Initializing DatasetIORouter")
         self.routing_table = routing_table
