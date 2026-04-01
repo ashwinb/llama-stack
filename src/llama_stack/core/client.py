@@ -95,7 +95,7 @@ def create_api_client_class(protocol: type) -> type:
                 if j is None:
                     return None
                 # print(f"({protocol.__name__}) Returning {j}, type {return_type}")
-                return parse_obj_as(return_type, j)
+                return parse_obj_as(return_type, j)  # ty: ignore[invalid-argument-type]
 
         async def _call_streaming(self, method_name: str, *args, **kwargs) -> Any:
             webmethod, sig = self.routes[method_name]
@@ -194,7 +194,7 @@ def create_api_client_class(protocol: type) -> type:
 
             method_impl.__name__ = name
             method_impl.__qualname__ = f"APIClient.{name}"
-            method_impl.__signature__ = inspect.signature(method)
+            method_impl.__signature__ = inspect.signature(method)  # ty: ignore[unresolved-attribute]
             setattr(APIClient, name, method_impl)
 
     # Name the class after the protocol

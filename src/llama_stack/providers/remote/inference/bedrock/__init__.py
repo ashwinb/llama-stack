@@ -19,4 +19,4 @@ async def get_adapter_impl(config: BedrockConfig, _deps: dict[str, Any]) -> Infe
 
     await impl.initialize()
 
-    return impl
+    return impl  # ty: ignore[invalid-return-type]

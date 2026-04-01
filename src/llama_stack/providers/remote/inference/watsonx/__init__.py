@@ -16,4 +16,4 @@ async def get_adapter_impl(config: WatsonXConfig, _deps: dict[str, Any]) -> Infe
     from .watsonx import WatsonXInferenceAdapter
 
     adapter = WatsonXInferenceAdapter(config)
-    return adapter
+    return adapter  # ty: ignore[invalid-return-type]

@@ -19,7 +19,7 @@ async def get_adapter_impl(config: NVIDIAConfig, _deps: dict[str, Any]) -> Infer
         raise RuntimeError(f"Unexpected config type: {type(config)}")
     adapter = NVIDIAInferenceAdapter(config=config)
     await adapter.initialize()
-    return adapter
+    return adapter  # ty: ignore[invalid-return-type]
 
 
 __all__ = ["get_adapter_impl", "NVIDIAConfig"]

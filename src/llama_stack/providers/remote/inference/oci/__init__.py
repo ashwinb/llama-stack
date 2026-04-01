@@ -16,4 +16,4 @@ async def get_adapter_impl(config: OCIConfig, _deps: dict[str, Any]) -> Inferenc
 
     adapter = OCIInferenceAdapter(config=config)
     await adapter.initialize()
-    return adapter
+    return adapter  # ty: ignore[invalid-return-type]

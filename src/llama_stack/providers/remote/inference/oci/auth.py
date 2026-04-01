@@ -48,7 +48,7 @@ class HttpxOciAuth(httpx.Auth):
         prepared_request = req.prepare()
 
         # Sign the request using the OCI Signer
-        self.signer.do_request_sign(prepared_request)  # type: ignore[union-attr]
+        self.signer.do_request_sign(prepared_request)  # ty: ignore[missing-argument]
 
         # Update the original HTTPX request with the signed headers
         request.headers.update(prepared_request.headers)

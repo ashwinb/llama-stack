@@ -13,7 +13,7 @@ from typing import Any
 class EnumEncoder(json.JSONEncoder):
     """JSON encoder that serializes Enum values and datetime objects."""
 
-    def default(self, obj: Any) -> Any:
+    def default(self, obj: Any) -> Any:  # ty: ignore[invalid-method-override]
         if isinstance(obj, Enum):
             return obj.value
         elif isinstance(obj, datetime):

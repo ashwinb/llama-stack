@@ -197,7 +197,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
 
         # Skip fields with no type annotations
         if is_basemodel_without_fields(field_type):
-            config_data[field_name] = field_type()
+            config_data[field_name] = field_type()  # ty: ignore[call-non-callable]
             continue
 
         if inspect.isclass(field_type) and issubclass(field_type, Enum):
@@ -207,7 +207,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
                 user_input = input(prompt + " ")
                 try:
                     value = field_type[user_input]
-                    validated_value = manually_validate_field(config_type, field, value)
+                    validated_value = manually_validate_field(config_type, field, value)  # ty: ignore[invalid-argument-type]
                     config_data[field_name] = validated_value
                     break
                 except KeyError:
@@ -240,7 +240,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
         elif can_recurse(field_type):
             log.info(f"\nEntering sub-configuration for {field_name}:")
             config_data[field_name] = prompt_for_config(
-                field_type,
+                field_type,  # ty: ignore[invalid-argument-type]
                 existing_value,
             )
         else:
@@ -310,7 +310,7 @@ def prompt_for_config(config_type: type[BaseModel], existing_config: BaseModel |
 
                             value = field_type(**ast.literal_eval(user_input))
                         else:
-                            value = field_type(user_input)
+                            value = field_type(user_input)  # ty: ignore[call-non-callable]
 
                     except ValueError:
                         log.error(f"Invalid input. Expected type: {getattr(field_type, '__name__', str(field_type))}")

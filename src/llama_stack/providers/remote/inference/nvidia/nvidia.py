@@ -96,7 +96,7 @@ class NVIDIAInferenceAdapter(OpenAIMixin):
         """
         if identifier in self.config.rerank_model_to_url:
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.rerank,

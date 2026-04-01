@@ -364,7 +364,7 @@ class LlamaGuardShield:
         categories = self.get_safety_categories()
         categories_str = "\n".join(categories)
         conversations_str = "\n\n".join(
-            [f"{m.role.capitalize()}: {interleaved_content_as_str(m.content)}" for m in messages]
+            [f"{m.role.capitalize()}: {interleaved_content_as_str(m.content)}" for m in messages]  # ty: ignore[invalid-argument-type]
         )
         return PROMPT_TEMPLATE.substitute(
             agent_type=messages[-1].role.capitalize(),

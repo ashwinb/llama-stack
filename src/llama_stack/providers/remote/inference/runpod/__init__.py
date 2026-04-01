@@ -17,4 +17,4 @@ async def get_adapter_impl(config: RunpodImplConfig, _deps: dict[str, Any]) -> I
     assert isinstance(config, RunpodImplConfig), f"Unexpected config type: {type(config)}"
     impl = RunpodInferenceAdapter(config=config)
     await impl.initialize()
-    return impl
+    return impl  # ty: ignore[invalid-return-type]
