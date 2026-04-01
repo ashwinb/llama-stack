@@ -15,7 +15,6 @@ from llama_stack_api import (
     JobCancelRequest,
     JobResultRequest,
     JobStatusRequest,
-    RoutingTable,
     RunEvalRequest,
     ScoreBatchRequest,
     ScoreBatchResponse,
@@ -29,6 +28,9 @@ from llama_stack_api import (
     resolve_run_eval_request,
 )
 
+from ..routing_tables.benchmarks import BenchmarksRoutingTable
+from ..routing_tables.scoring_functions import ScoringFunctionsRoutingTable
+
 logger = get_logger(name=__name__, category="core::routers")
 
 
@@ -37,7 +39,7 @@ class ScoringRouter(Scoring):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: ScoringFunctionsRoutingTable,
     ) -> None:
         logger.debug("Initializing ScoringRouter")
         self.routing_table = routing_table
@@ -103,7 +105,7 @@ class EvalRouter(Eval):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: BenchmarksRoutingTable,
     ) -> None:
         logger.debug("Initializing EvalRouter")
         self.routing_table = routing_table

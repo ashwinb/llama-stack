@@ -13,16 +13,18 @@ from llama_stack.core.datatypes import (
 )
 from llama_stack.core.store import DistributionRegistry
 from llama_stack.providers.utils.inference.inference_store import InferenceStore
-from llama_stack_api import Api, RoutingTable
+from llama_stack_api import Api
+
+from ..routing_tables.common import CommonRoutingTableImpl
 
 
 async def get_routing_table_impl(
     api: Api,
     impls_by_provider_id: dict[str, RoutedProtocol],
-    _deps,
+    _deps: dict[str, Any],
     dist_registry: DistributionRegistry,
     policy: list[AccessRule],
-) -> Any:
+) -> CommonRoutingTableImpl:
     from ..routing_tables.benchmarks import BenchmarksRoutingTable
     from ..routing_tables.datasets import DatasetsRoutingTable
     from ..routing_tables.models import ModelsRoutingTable
@@ -51,7 +53,11 @@ async def get_routing_table_impl(
 
 
 async def get_auto_router_impl(
-    api: Api, routing_table: RoutingTable, deps: dict[str, Any], run_config: StackConfig, policy: list[AccessRule]
+    api: Api,
+    routing_table: CommonRoutingTableImpl,
+    deps: dict[str, Any],
+    run_config: StackConfig,
+    policy: list[AccessRule],
 ) -> Any:
     from .datasets import DatasetIORouter
     from .eval_scoring import EvalRouter, ScoringRouter
@@ -60,19 +66,7 @@ async def get_auto_router_impl(
     from .tool_runtime import ToolRuntimeRouter
     from .vector_io import VectorIORouter
 
-    api_to_routers = {
-        "vector_io": VectorIORouter,
-        "inference": InferenceRouter,
-        "safety": SafetyRouter,
-        "datasetio": DatasetIORouter,
-        "scoring": ScoringRouter,
-        "eval": EvalRouter,
-        "tool_runtime": ToolRuntimeRouter,
-    }
-    if api.value not in api_to_routers:
-        raise ValueError(f"API {api.value} not found in router map")
-
-    api_to_dep_impl = {}
+    api_to_dep_impl: dict[str, Any] = {}
     # TODO: move pass configs to routers instead
     if api == Api.inference:
         inference_ref = run_config.storage.stores.inference
@@ -87,9 +81,21 @@ async def get_auto_router_impl(
         api_to_dep_impl["store"] = inference_store
     elif api == Api.vector_io:
         api_to_dep_impl["vector_stores_config"] = run_config.vector_stores
-        api_to_dep_impl["inference_api"] = deps.get(Api.inference)
+        api_to_dep_impl["inference_api"] = deps.get(Api.inference)  # ty: ignore[invalid-argument-type]  # deps keyed by Api enum at runtime
     elif api == Api.safety:
         api_to_dep_impl["safety_config"] = run_config.safety
+
+    api_to_routers: dict[str, type] = {
+        "vector_io": VectorIORouter,
+        "inference": InferenceRouter,
+        "safety": SafetyRouter,
+        "datasetio": DatasetIORouter,
+        "scoring": ScoringRouter,
+        "eval": EvalRouter,
+        "tool_runtime": ToolRuntimeRouter,
+    }
+    if api.value not in api_to_routers:
+        raise ValueError(f"API {api.value} not found in router map")
 
     impl = api_to_routers[api.value](routing_table, **api_to_dep_impl)
 

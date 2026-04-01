@@ -12,7 +12,6 @@ from llama_stack.telemetry.helpers import safety_request_span_attributes, safety
 from llama_stack_api import (
     ModerationObject,
     RegisterShieldRequest,
-    RoutingTable,
     RunModerationRequest,
     RunShieldRequest,
     RunShieldResponse,
@@ -20,6 +19,8 @@ from llama_stack_api import (
     Shield,
     UnregisterShieldRequest,
 )
+
+from ..routing_tables.shields import ShieldsRoutingTable
 
 logger = get_logger(name=__name__, category="core::routers")
 tracer = trace.get_tracer(__name__)
@@ -30,7 +31,7 @@ class SafetyRouter(Safety):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: ShieldsRoutingTable,
         safety_config: SafetyConfig | None = None,
     ) -> None:
         logger.debug("Initializing SafetyRouter")

@@ -14,8 +14,10 @@ from llama_stack_api import (
     DataSource,
     IterRowsRequest,
     PaginatedResponse,
-    RoutingTable,
 )
+from llama_stack_api.datasets.api import RegisterDatasetRequest
+
+from ..routing_tables.datasets import DatasetsRoutingTable
 
 logger = get_logger(name=__name__, category="core::routers")
 
@@ -25,7 +27,7 @@ class DatasetIORouter(DatasetIO):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: DatasetsRoutingTable,
     ) -> None:
         logger.debug("Initializing DatasetIORouter")
         self.routing_table = routing_table
@@ -52,12 +54,13 @@ class DatasetIORouter(DatasetIO):
             metadata=metadata,
             dataset_id=dataset_id,
         )
-        await self.routing_table.register_dataset(
+        request = RegisterDatasetRequest(
             purpose=purpose,
             source=source,
             metadata=metadata,
             dataset_id=dataset_id,
         )
+        await self.routing_table.register_dataset(request)
 
     async def iterrows(self, request: IterRowsRequest) -> PaginatedResponse:
         logger.debug(

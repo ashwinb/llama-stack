@@ -47,9 +47,10 @@ from llama_stack_api import (
     OpenAITopLogProb,
     RegisterModelRequest,
     RerankResponse,
-    RoutingTable,
 )
 from llama_stack_api.inference.models import RerankRequest
+
+from ..routing_tables.models import ModelsRoutingTable
 
 logger = get_logger(name=__name__, category="core::routers")
 
@@ -59,7 +60,7 @@ class InferenceRouter(Inference):
 
     def __init__(
         self,
-        routing_table: RoutingTable,
+        routing_table: ModelsRoutingTable,
         store: InferenceStore | None = None,
     ) -> None:
         logger.debug("Initializing InferenceRouter")
@@ -105,11 +106,11 @@ class InferenceRouter(Inference):
     async def _get_model_provider(self, model_id: str, expected_model_type: str) -> tuple[Inference, str]:
         model = await self.routing_table.get_object_by_identifier("model", model_id)
         if model:
-            if model.model_type != expected_model_type:
-                raise ModelTypeError(model_id, model.model_type, expected_model_type)
+            if model.model_type != expected_model_type:  # ty: ignore[unresolved-attribute]  # model_type on Model variant
+                raise ModelTypeError(model_id, model.model_type, expected_model_type)  # ty: ignore[unresolved-attribute]  # model_type on Model variant
 
             provider = await self.routing_table.get_provider_impl(model.identifier)
-            return provider, model.provider_resource_id
+            return provider, model.provider_resource_id  # ty: ignore[invalid-return-type]  # provider is Inference at runtime
 
         # Handles cases where clients use the provider format directly
         return await self._get_provider_by_fallback(model_id, expected_model_type)
@@ -134,13 +135,13 @@ class InferenceRouter(Inference):
             identifier=model_id,
             provider_id=provider_id,
             provider_resource_id=provider_resource_id,
-            model_type=expected_model_type,
+            model_type=expected_model_type,  # ty: ignore[invalid-argument-type]  # str compatible with ModelType at runtime
             metadata={},  # Empty metadata for temporary object
         )
 
         # Perform RBAC check
         user = get_authenticated_user()
-        if not is_action_allowed(self.routing_table.policy, "read", temp_model, user):
+        if not is_action_allowed(self.routing_table.policy, "read", temp_model, user):  # ty: ignore[invalid-argument-type]  # ModelWithOwner is valid RoutableObjectWithProvider
             logger.debug(
                 "Access denied to model via fallback path for user",
                 model_id=model_id,
@@ -148,9 +149,9 @@ class InferenceRouter(Inference):
             )
             raise ModelNotFoundError(model_id)
 
-        return self.routing_table.impls_by_provider_id[provider_id], provider_resource_id
+        return self.routing_table.impls_by_provider_id[provider_id], provider_resource_id  # ty: ignore[invalid-return-type]  # provider is Inference at runtime
 
-    async def rerank(
+    async def rerank(  # ty: ignore[invalid-method-override]  # uses RerankRequest instead of params
         self,
         params: RerankRequest,
     ) -> RerankResponse:
@@ -173,11 +174,11 @@ class InferenceRouter(Inference):
         params.model = provider_resource_id
 
         if params.stream:
-            return await provider.openai_completion(params)
+            return await provider.openai_completion(params)  # ty: ignore[invalid-return-type]  # streaming handled upstream
 
         response = await provider.openai_completion(params)
-        response.model = request_model_id
-        return response
+        response.model = request_model_id  # ty: ignore[invalid-assignment]  # model is str on OpenAICompletion
+        return response  # ty: ignore[invalid-return-type]  # non-streaming returns OpenAICompletion
 
     async def openai_chat_completion(
         self,
@@ -215,9 +216,9 @@ class InferenceRouter(Inference):
             # For streaming, the provider returns AsyncIterator[OpenAIChatCompletionChunk]
             # We need to add metrics to each chunk and store the final completion
             return self.stream_tokens_and_compute_metrics_openai_chat(
-                response=response_stream,
+                response=response_stream,  # ty: ignore[invalid-argument-type]  # streaming returns AsyncIterator
                 fully_qualified_model_id=request_model_id,
-                provider_id=provider.__provider_id__,
+                provider_id=provider.__provider_id__,  # ty: ignore[unresolved-attribute]  # runtime-injected provider ID
                 messages=params.messages,
             )
 
@@ -271,12 +272,12 @@ class InferenceRouter(Inference):
         self, provider: Inference, params: OpenAIChatCompletionRequestWithExtraBody
     ) -> OpenAIChatCompletion:
         response = await provider.openai_chat_completion(params)
-        for choice in response.choices:
+        for choice in response.choices:  # ty: ignore[unresolved-attribute]  # non-streaming returns OpenAIChatCompletion with .choices
             # some providers return an empty list for no tool calls in non-streaming responses
             # but the OpenAI API returns None. So, set tool_calls to None if it's empty
             if choice.message and choice.message.tool_calls is not None and len(choice.message.tool_calls) == 0:
                 choice.message.tool_calls = None
-        return response
+        return response  # ty: ignore[invalid-return-type]  # non-streaming path returns OpenAIChatCompletion
 
     async def health(self) -> dict[str, HealthResponse]:
         health_statuses = {}
@@ -286,7 +287,7 @@ class InferenceRouter(Inference):
                 # check if the provider has a health method
                 if not hasattr(impl, "health"):
                     continue
-                health = await asyncio.wait_for(impl.health(), timeout=timeout)
+                health = await asyncio.wait_for(impl.health(), timeout=timeout)  # ty: ignore[call-non-callable]  # guarded by hasattr check
                 health_statuses[provider_id] = health
             except TimeoutError:
                 health_statuses[provider_id] = HealthResponse(
@@ -428,7 +429,7 @@ class InferenceRouter(Inference):
                     message = OpenAIChatCompletionResponseMessage(
                         role="assistant",
                         content=content_str if content_str else None,
-                        tool_calls=assembled_tool_calls if assembled_tool_calls else None,
+                        tool_calls=assembled_tool_calls if assembled_tool_calls else None,  # ty: ignore[invalid-argument-type]  # list covariance
                     )
                     logprobs_content = choice_data["logprobs_content_parts"]
                     final_logprobs = OpenAIChoiceLogprobs(content=logprobs_content) if logprobs_content else None
