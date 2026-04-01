@@ -32,6 +32,8 @@ logger = get_logger(__name__, category="inference")
 class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
     """Inference adapter that forwards requests to any OpenAI-compatible endpoint."""
 
+    __provider_id__: str = ""  # runtime-injected by the routing table
+
     def __init__(self, config: PassthroughImplConfig) -> None:
         self.config = config
 
@@ -180,4 +182,4 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         client = self._get_openai_client()
         request_params = params.model_dump(exclude_none=True)
         response = await client.embeddings.create(**request_params)
-        return response  # type: ignore
+        return response  # type: ignore[return-value]  # ty: ignore[invalid-return-type]

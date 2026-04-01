@@ -53,11 +53,11 @@ class PassthroughImplConfig(RemoteInferenceProviderConfig):
     @classmethod
     def sample_run_config(
         cls,
-        base_url: HttpUrl | None = "${env.PASSTHROUGH_URL}",
+        base_url: str = "${env.PASSTHROUGH_URL}",
         api_key: str = "${env.PASSTHROUGH_API_KEY:=}",
         forward_headers: dict[str, str] | None = None,
         extra_blocked_headers: list[str] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         config: dict[str, Any] = {
             "base_url": base_url,

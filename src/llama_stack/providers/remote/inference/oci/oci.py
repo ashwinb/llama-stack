@@ -9,9 +9,9 @@ from collections.abc import Iterable
 from typing import Any
 
 import httpx
-import oci
-from oci.generative_ai.generative_ai_client import GenerativeAiClient
-from oci.generative_ai.models import ModelCollection
+import oci  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
+from oci.generative_ai.generative_ai_client import GenerativeAiClient  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
+from oci.generative_ai.models import ModelCollection  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
 from openai import DefaultAsyncHttpxClient
 
 from llama_stack.log import get_logger
@@ -32,6 +32,8 @@ MODEL_CAPABILITIES = ["TEXT_GENERATION", "TEXT_SUMMARIZATION", "TEXT_EMBEDDINGS"
 
 class OCIInferenceAdapter(OpenAIMixin):
     """Inference adapter for Oracle Cloud Infrastructure Generative AI."""
+
+    __provider_id__: str = ""  # runtime-injected by the routing table
 
     config: OCIConfig
 
@@ -78,7 +80,7 @@ class OCIInferenceAdapter(OpenAIMixin):
             return oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
         return None
 
-    def _get_oci_config(self) -> dict:
+    def _get_oci_config(self) -> dict[str, Any]:
         if self.config.oci_auth_type == OCI_AUTH_TYPE_INSTANCE_PRINCIPAL:
             config = {"region": self.config.oci_region}
         elif self.config.oci_auth_type == OCI_AUTH_TYPE_CONFIG_FILE:
@@ -152,13 +154,13 @@ class OCIInferenceAdapter(OpenAIMixin):
         """
         if identifier in self.embedding_models:
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
             )
         return Model(
-            provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+            provider_id=self.__provider_id__,
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=ModelType.llm,
