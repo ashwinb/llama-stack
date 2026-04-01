@@ -9,7 +9,7 @@ import json
 import sys
 from collections.abc import AsyncIterator
 from enum import Enum
-from typing import Any, Union, get_args, get_origin
+from typing import Any, Union, cast, get_args, get_origin
 
 import httpx
 from pydantic import BaseModel, parse_obj_as
@@ -195,7 +195,7 @@ def create_api_client_class(protocol: type) -> type:
 
             method_impl.__name__ = name
             method_impl.__qualname__ = f"APIClient.{name}"
-            setattr(method_impl, "__signature__", inspect.signature(method))
+            cast(Any, method_impl).__signature__ = inspect.signature(method)
             setattr(APIClient, name, method_impl)
 
     # Name the class after the protocol
