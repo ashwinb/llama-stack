@@ -61,9 +61,9 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             data = parts["data"]
 
             if parts["is_base64"]:
-                file_data = base64.b64decode(data)
+                file_data = base64.b64decode(str(data))
             else:
-                file_data = data.encode("utf-8")
+                file_data = str(data).encode("utf-8")
 
             return file_data, mime_type
         else:
@@ -76,7 +76,7 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
         if isinstance(doc.content, str):
             content_str = doc.content
         else:
-            content_str = interleaved_content_as_str(doc.content)
+            content_str = interleaved_content_as_str(doc.content)  # ty: ignore[invalid-argument-type]
 
         if content_str.startswith("file://"):
             raise ValueError("file:// URIs are not supported. Please use the Files API (/v1/files) to upload files.")
@@ -86,9 +86,9 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             data = parts["data"]
 
             if parts["is_base64"]:
-                file_data = base64.b64decode(data)
+                file_data = base64.b64decode(str(data))
             else:
-                file_data = data.encode("utf-8")
+                file_data = str(data).encode("utf-8")
 
             return file_data, mime_type
         else:
@@ -287,7 +287,7 @@ class FileSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime):
         picked.append(TextContentItem(text=footer_template))
         picked.append(
             TextContentItem(
-                text=context_template.format(query=interleaved_content_as_str(content), annotation_instruction="")
+                text=context_template.format(query=interleaved_content_as_str(content), annotation_instruction="")  # ty: ignore[invalid-argument-type]
             )
         )
 

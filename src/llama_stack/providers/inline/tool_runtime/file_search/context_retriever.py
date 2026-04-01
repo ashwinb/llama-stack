@@ -31,9 +31,9 @@ async def generate_rag_query(
     retrieving relevant information from the memory bank.
     """
     if config.type == RAGQueryGenerator.default.value:
-        query = await default_rag_query_generator(config, content, **kwargs)
+        query = await default_rag_query_generator(config, content, **kwargs)  # ty: ignore[invalid-argument-type]
     elif config.type == RAGQueryGenerator.llm.value:
-        query = await llm_rag_query_generator(config, content, **kwargs)
+        query = await llm_rag_query_generator(config, content, **kwargs)  # ty: ignore[invalid-argument-type]
     else:
         raise NotImplementedError(f"Unsupported memory query generator {config.type}")
     return query
@@ -53,7 +53,7 @@ async def default_rag_query_generator(
     Returns:
         String representation of the content
     """
-    return interleaved_content_as_str(content, sep=config.separator)
+    return interleaved_content_as_str(content, sep=config.separator)  # ty: ignore[invalid-argument-type]
 
 
 async def llm_rag_query_generator(
@@ -75,9 +75,9 @@ async def llm_rag_query_generator(
 
     messages = []
     if isinstance(content, list):
-        messages = [interleaved_content_as_str(m) for m in content]
+        messages = [interleaved_content_as_str(m) for m in content]  # ty: ignore[invalid-argument-type]
     else:
-        messages = [interleaved_content_as_str(content)]
+        messages = [interleaved_content_as_str(content)]  # ty: ignore[invalid-argument-type]
 
     template = Template(config.template)
     rendered_content: str = template.render({"messages": messages})
@@ -91,6 +91,6 @@ async def llm_rag_query_generator(
     )
     response = await inference_api.openai_chat_completion(params)
 
-    query = response.choices[0].message.content
+    query = response.choices[0].message.content  # ty: ignore[unresolved-attribute]
 
     return query
