@@ -398,7 +398,7 @@ class StreamingResponseOrchestrator:
 
         # Input safety validation - check messages before processing
         if self.guardrail_ids:
-            combined_text = interleaved_content_as_str([msg.content for msg in self.ctx.messages])
+            combined_text = " ".join(interleaved_content_as_str(msg.content) for msg in self.ctx.messages)  # ty: ignore[invalid-argument-type]  # OpenAI content types handled at runtime
             input_violation_message = await run_guardrails(self.safety_api, combined_text, self.guardrail_ids)
             if input_violation_message:
                 logger.info("Input guardrail violation", input_violation_message=input_violation_message)
