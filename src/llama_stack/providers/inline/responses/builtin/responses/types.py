@@ -134,7 +134,9 @@ class ToolContext(BaseModel):
             self.tools_to_process = tools_to_process
             # for all matched definitions, get the mcp_list_tools objects from the previous output:
             self.previous_tool_listings = [  # ty: ignore[invalid-assignment]  # list comprehension filters to MCP list tools type but ty can't narrow
-                obj for obj in previous_response.output if obj.type == "mcp_list_tools" and obj.server_label in matched  # ty: ignore[unresolved-attribute]  # server_label exists on mcp_list_tools items
+                obj
+                for obj in previous_response.output
+                if obj.type == "mcp_list_tools" and obj.server_label in matched  # ty: ignore[unresolved-attribute]  # server_label exists on mcp_list_tools items
             ]
             # reconstruct the tool to server mappings that can be reused:
             for listing in self.previous_tool_listings:
@@ -212,7 +214,9 @@ class ChatCompletionContext(BaseModel):
         if not isinstance(inputs, str):
             self.approval_requests = [input for input in inputs if input.type == "mcp_approval_request"]  # ty: ignore[invalid-assignment]  # filtered by type but ty can't narrow
             self.approval_responses = {  # ty: ignore[invalid-assignment]  # filtered by type but ty can't narrow
-                input.approval_request_id: input for input in inputs if input.type == "mcp_approval_response"  # ty: ignore[unresolved-attribute]  # approval_request_id exists on mcp_approval_response items
+                input.approval_request_id: input  # ty: ignore[unresolved-attribute]  # approval_request_id exists on mcp_approval_response items
+                for input in inputs
+                if input.type == "mcp_approval_response"
             }
 
     def approval_response(self, tool_name: str, arguments: str) -> OpenAIResponseMCPApprovalResponse | None:
