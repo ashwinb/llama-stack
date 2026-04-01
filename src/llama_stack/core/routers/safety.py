@@ -4,6 +4,8 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
+from typing import Any
+
 from opentelemetry import trace
 
 from llama_stack.core.datatypes import SafetyConfig
@@ -34,7 +36,7 @@ class SafetyRouter(Safety):
         safety_config: SafetyConfig | None = None,
     ) -> None:
         logger.debug("Initializing SafetyRouter")
-        self.routing_table = routing_table
+        self.routing_table: Any = routing_table
         self.safety_config = safety_config
 
     async def initialize(self) -> None:

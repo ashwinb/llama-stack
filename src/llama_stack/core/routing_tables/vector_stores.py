@@ -4,7 +4,7 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import Any
+from typing import Any, cast
 
 from llama_stack.core.datatypes import (
     VectorStoreWithOwner,
@@ -62,7 +62,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
 
     async def list_vector_stores(self) -> list[VectorStoreWithOwner]:
         """List all registered vector stores."""
-        return await self.get_all_with_type(ResourceType.vector_store.value)
+        return cast(list[VectorStoreWithOwner], await self.get_all_with_type(ResourceType.vector_store.value))
 
     async def register_vector_store(
         self,
@@ -91,11 +91,10 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
 
         vector_store = VectorStoreWithOwner(
             identifier=vector_store_id,
-            type=ResourceType.vector_store.value,
             provider_id=provider_id,
             provider_resource_id=provider_vector_store_id,
             embedding_model=embedding_model,
-            embedding_dimension=embedding_dimension,
+            embedding_dimension=embedding_dimension or 384,
             vector_store_name=vector_store_name,
         )
         await self.register_object(vector_store)

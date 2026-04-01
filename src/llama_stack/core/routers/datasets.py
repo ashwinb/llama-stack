@@ -28,7 +28,7 @@ class DatasetIORouter(DatasetIO):
         routing_table: RoutingTable,
     ) -> None:
         logger.debug("Initializing DatasetIORouter")
-        self.routing_table = routing_table
+        self.routing_table: Any = routing_table
 
     async def initialize(self) -> None:
         logger.debug("DatasetIORouter.initialize")

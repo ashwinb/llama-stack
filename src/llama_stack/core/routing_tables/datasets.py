@@ -5,9 +5,11 @@
 # the root directory of this source tree.
 
 import uuid
+from typing import cast
 
 from llama_stack.core.datatypes import (
     DatasetWithOwner,
+    RoutableObjectWithProvider,
 )
 from llama_stack.log import get_logger
 from llama_stack_api import (
@@ -35,13 +37,13 @@ class DatasetsRoutingTable(CommonRoutingTableImpl, Datasets):
     """Routing table for managing dataset registrations and provider lookups."""
 
     async def list_datasets(self) -> ListDatasetsResponse:
-        return ListDatasetsResponse(data=await self.get_all_with_type(ResourceType.dataset.value))
+        return ListDatasetsResponse(data=cast(list[Dataset], await self.get_all_with_type(ResourceType.dataset.value)))
 
     async def get_dataset(self, request: GetDatasetRequest) -> Dataset:
         dataset = await self.get_object_by_identifier("dataset", request.dataset_id)
         if dataset is None:
             raise DatasetNotFoundError(request.dataset_id)
-        return dataset
+        return cast(Dataset, dataset)
 
     async def register_dataset(self, request: RegisterDatasetRequest) -> Dataset:
         purpose = request.purpose
@@ -64,7 +66,7 @@ class DatasetsRoutingTable(CommonRoutingTableImpl, Datasets):
             provider_id = metadata.get("provider_id")  # pass through from nvidia datasetio
         elif source.type == DatasetType.rows.value:
             provider_id = "localfs"
-        elif source.type == DatasetType.uri.value:
+        elif source.type == DatasetType.uri.value and isinstance(source, URIDataSource):
             # infer provider from uri
             if source.uri.startswith("huggingface"):
                 provider_id = "huggingface"
@@ -79,7 +81,7 @@ class DatasetsRoutingTable(CommonRoutingTableImpl, Datasets):
         dataset = DatasetWithOwner(
             identifier=dataset_id,
             provider_resource_id=provider_dataset_id,
-            provider_id=provider_id,
+            provider_id=provider_id or "",
             purpose=purpose,
             source=source,
             metadata=metadata,
@@ -90,4 +92,4 @@ class DatasetsRoutingTable(CommonRoutingTableImpl, Datasets):
 
     async def unregister_dataset(self, request: UnregisterDatasetRequest) -> None:
         dataset = await self.get_dataset(GetDatasetRequest(dataset_id=request.dataset_id))
-        await self.unregister_object(dataset)
+        await self.unregister_object(cast(RoutableObjectWithProvider, dataset))

@@ -4,7 +4,10 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
+from typing import cast
+
 from llama_stack.core.datatypes import (
+    RoutableObjectWithProvider,
     ShieldWithOwner,
 )
 from llama_stack.log import get_logger
@@ -27,13 +30,13 @@ class ShieldsRoutingTable(CommonRoutingTableImpl, Shields):
     """Routing table for managing shield registrations and provider lookups."""
 
     async def list_shields(self) -> ListShieldsResponse:
-        return ListShieldsResponse(data=await self.get_all_with_type(ResourceType.shield.value))
+        return ListShieldsResponse(data=cast(list[Shield], await self.get_all_with_type(ResourceType.shield.value)))
 
     async def get_shield(self, request: GetShieldRequest) -> Shield:
         shield = await self.get_object_by_identifier("shield", request.identifier)
         if shield is None:
             raise ValueError(f"Shield '{request.identifier}' not found")
-        return shield
+        return cast(Shield, shield)
 
     async def register_shield(self, request: RegisterShieldRequest) -> Shield:
         provider_shield_id = request.provider_shield_id
@@ -62,4 +65,4 @@ class ShieldsRoutingTable(CommonRoutingTableImpl, Shields):
 
     async def unregister_shield(self, request: UnregisterShieldRequest) -> None:
         existing_shield = await self.get_shield(GetShieldRequest(identifier=request.identifier))
-        await self.unregister_object(existing_shield)
+        await self.unregister_object(cast(RoutableObjectWithProvider, existing_shield))
