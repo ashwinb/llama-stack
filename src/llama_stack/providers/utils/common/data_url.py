@@ -7,7 +7,7 @@
 import re
 
 
-def parse_data_url(data_url: str):
+def parse_data_url(data_url: str) -> dict[str, str | bool | None]:
     """Parse a data URL into its component parts.
 
     Args:

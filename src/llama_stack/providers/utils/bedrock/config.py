@@ -62,5 +62,5 @@ class BedrockBaseConfig(RemoteInferenceProviderConfig):
     )
 
     @classmethod
-    def sample_run_config(cls, **kwargs):
+    def sample_run_config(cls, **kwargs: dict) -> dict:
         return {}
