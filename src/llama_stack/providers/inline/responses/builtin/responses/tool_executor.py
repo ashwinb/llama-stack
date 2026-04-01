@@ -56,7 +56,7 @@ class ToolExecutor:
         tool_groups_api: ToolGroups,
         tool_runtime_api: ToolRuntime,
         vector_io_api: VectorIO,
-        vector_stores_config=None,
+        vector_stores_config: VectorStoresConfig | None = None,
         mcp_session_manager=None,
     ):
         self.tool_groups_api = tool_groups_api
@@ -168,13 +168,14 @@ class ToolExecutor:
             and self.vector_stores_config.annotation_prompt_params.enable_annotations
         )
 
-        # Get templates
-        header_template = self.vector_stores_config.file_search_params.header_template
-        footer_template = self.vector_stores_config.file_search_params.footer_template
-        context_template = self.vector_stores_config.context_prompt_params.context_template
+        # Get templates - use provided config or defaults
+        config = self.vector_stores_config if self.vector_stores_config is not None else VectorStoresConfig()
+        header_template = config.file_search_params.header_template
+        footer_template = config.file_search_params.footer_template
+        context_template = config.context_prompt_params.context_template
 
         # Get annotation templates (use defaults if annotations disabled)
-        if enable_annotations:
+        if enable_annotations and self.vector_stores_config is not None:
             chunk_annotation_template = self.vector_stores_config.annotation_prompt_params.chunk_annotation_template
             annotation_instruction_template = (
                 self.vector_stores_config.annotation_prompt_params.annotation_instruction_template
@@ -328,9 +329,10 @@ class ToolExecutor:
                 from llama_stack.providers.utils.tools.mcp import invoke_mcp_tool
 
                 mcp_tool = mcp_tool_to_server[function_name]
-                attributes = {
+                server_url = mcp_tool.server_url or ""
+                attributes: dict[str, str] = {
                     "server_label": mcp_tool.server_label,
-                    "server_url": mcp_tool.server_url,
+                    "server_url": server_url,
                     "tool_name": function_name,
                 }
                 # TODO: follow semantic conventions for Open Telemetry tool spans
@@ -338,7 +340,7 @@ class ToolExecutor:
                 with tracer.start_as_current_span("invoke_mcp_tool", attributes=attributes):
                     # Pass session_manager for session reuse within request (fix for #4452)
                     result = await invoke_mcp_tool(
-                        endpoint=mcp_tool.server_url,
+                        endpoint=server_url,
                         tool_name=function_name,
                         kwargs=tool_kwargs,
                         headers=mcp_tool.headers,

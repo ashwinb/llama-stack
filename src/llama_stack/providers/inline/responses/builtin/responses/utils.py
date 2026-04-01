@@ -10,6 +10,7 @@ import mimetypes
 import re
 import uuid
 from collections.abc import Sequence
+from typing import Any, cast
 
 from llama_stack_api import (
     Files,
@@ -38,6 +39,7 @@ from llama_stack_api import (
     OpenAIResponseInputMessageContentImage,
     OpenAIResponseInputMessageContentText,
     OpenAIResponseInputTool,
+    OpenAIResponseInputToolFunction,
     OpenAIResponseMCPApprovalRequest,
     OpenAIResponseMCPApprovalResponse,
     OpenAIResponseMessage,
@@ -371,7 +373,7 @@ async def convert_response_input_to_chat_messages(
                         if last_user_content == content:
                             continue  # Skip duplicate user message
                 # Dynamic message type call - different message types have different content expectations
-                messages.append(message_type(content=content))  # type: ignore[call-arg,arg-type]
+                messages.append(message_type(content=cast(Any, content)))  # type: ignore[call-arg]
         if len(tool_call_results):
             # Check if unpaired function_call_outputs reference function_calls from previous messages
             if previous_messages:
@@ -418,8 +420,8 @@ async def convert_response_text_to_chat_response_format(
         return OpenAIResponseFormatJSONObject()
     if text.format["type"] == "json_schema":
         # Assert name exists for json_schema format
-        assert text.format.get("name"), "json_schema format requires a name"
-        schema_name: str = text.format["name"]  # type: ignore[assignment]
+        schema_name = text.format.get("name")
+        assert schema_name, "json_schema format requires a name"
         return OpenAIResponseFormatJSONSchema(
             json_schema=OpenAIJSONSchema(name=schema_name, schema=text.format["schema"])
         )
@@ -500,7 +502,7 @@ def is_function_tool_call(
     if not tool_call.function:
         return False
     for t in tools:
-        if t.type == "function" and t.name == tool_call.function.name:
+        if isinstance(t, OpenAIResponseInputToolFunction) and t.name == tool_call.function.name:
             return True
     return False
 
@@ -517,7 +519,7 @@ async def run_guardrails(safety_api: Safety | None, messages: str, guardrail_ids
     # Look up shields to get their provider_resource_id (actual model ID)
     model_ids = []
     # TODO: list_shields not in Safety interface but available at runtime via API routing
-    shields_list = await safety_api.routing_table.list_shields()  # type: ignore[attr-defined]
+    shields_list = await cast(Any, safety_api).routing_table.list_shields()  # runtime-injected routing_table
 
     for guardrail_id in guardrail_ids:
         matching_shields = [shield for shield in shields_list.data if shield.identifier == guardrail_id]
@@ -574,7 +576,7 @@ def convert_mcp_tool_choice(
     server_label: str | None = None,
     server_label_to_tools: dict[str, list[str]] | None = None,
     tool_name: str | None = None,
-) -> dict[str, str] | list[dict[str, str]]:
+) -> dict[str, str | dict[str, str]] | list[dict[str, str | dict[str, str]]] | None:
     """Convert a responses tool choice of type mcp to a chat completions compatible function tool choice."""
 
     if tool_name:

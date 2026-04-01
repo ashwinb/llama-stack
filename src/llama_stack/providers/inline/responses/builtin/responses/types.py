@@ -133,9 +133,10 @@ class ToolContext(BaseModel):
             # tools that are not the same or were not previously defined need to be processed:
             self.tools_to_process = tools_to_process
             # for all matched definitions, get the mcp_list_tools objects from the previous output:
-            self.previous_tool_listings = [
-                obj for obj in previous_response.output if obj.type == "mcp_list_tools" and obj.server_label in matched
-            ]
+            self.previous_tool_listings = cast(
+                list[OpenAIResponseOutputMessageMCPListTools],
+                [obj for obj in previous_response.output if obj.type == "mcp_list_tools" and getattr(obj, "server_label", None) in matched],
+            )
             # reconstruct the tool to server mappings that can be reused:
             for listing in self.previous_tool_listings:
                 # listing is OpenAIResponseOutputMessageMCPListTools which has tools: list[MCPListToolsTool]
@@ -210,10 +211,14 @@ class ChatCompletionContext(BaseModel):
             extra_body=extra_body,
         )
         if not isinstance(inputs, str):
-            self.approval_requests = [input for input in inputs if input.type == "mcp_approval_request"]
-            self.approval_responses = {
-                input.approval_request_id: input for input in inputs if input.type == "mcp_approval_response"
-            }
+            self.approval_requests = cast(
+                list[OpenAIResponseMCPApprovalRequest],
+                [input for input in inputs if input.type == "mcp_approval_request"],
+            )
+            self.approval_responses = cast(
+                dict[str, OpenAIResponseMCPApprovalResponse],
+                {getattr(input, "approval_request_id", ""): input for input in inputs if input.type == "mcp_approval_response"},
+            )
 
     def approval_response(self, tool_name: str, arguments: str) -> OpenAIResponseMCPApprovalResponse | None:
         request = self._approval_request(tool_name, arguments)
