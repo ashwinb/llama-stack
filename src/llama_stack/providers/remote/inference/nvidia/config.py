@@ -46,7 +46,7 @@ class NVIDIAConfig(RemoteInferenceProviderConfig):
     URL of your running NVIDIA NIM and do not need to set the api_key.
     """
 
-    base_url: HttpUrl | None = Field(
+    base_url: HttpUrl | None = Field(  # ty: ignore[invalid-assignment]  # pydantic Field descriptor
         default_factory=lambda: os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
         description="A base url for accessing the NVIDIA NIM",
     )
@@ -66,7 +66,7 @@ class NVIDIAConfig(RemoteInferenceProviderConfig):
     @classmethod
     def sample_run_config(
         cls,
-        base_url: HttpUrl | None = "${env.NVIDIA_BASE_URL:=https://integrate.api.nvidia.com/v1}",
+        base_url: str | None = "${env.NVIDIA_BASE_URL:=https://integrate.api.nvidia.com/v1}",  # type: ignore[assignment]  # template string resolved at runtime
         api_key: str = "${env.NVIDIA_API_KEY:=}",
         **kwargs,
     ) -> dict[str, Any]:
