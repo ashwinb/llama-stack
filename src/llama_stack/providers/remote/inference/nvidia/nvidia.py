@@ -54,7 +54,7 @@ class NVIDIAInferenceAdapter(OpenAIMixin):
                     "API key is required for hosted NVIDIA NIM. Either provide an API key or use a self-hosted NIM."
                 )
 
-    def get_api_key(self) -> str:
+    def get_api_key(self) -> str | None:
         """
         Get the API key for OpenAI mixin.
 
