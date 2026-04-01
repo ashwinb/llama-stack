@@ -5,9 +5,10 @@
 # the root directory of this source tree.
 
 import re
+from typing import Any
 
 
-def parse_data_url(data_url: str):
+def parse_data_url(data_url: str) -> dict[str, Any]:
     """Parse a data URL into its component parts.
 
     Args:

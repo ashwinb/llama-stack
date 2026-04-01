@@ -6,7 +6,6 @@
 
 import base64
 import re
-from typing import Any
 
 import httpx
 
@@ -23,7 +22,7 @@ log = get_logger(name=__name__, category="providers::utils")
 
 
 def interleaved_content_as_str(
-    content: Any,
+    content: str | TextContentItem | ImageContentItem | OpenAIFile | list[str | TextContentItem | ImageContentItem | OpenAIFile] | None,
     sep: str = " ",
 ) -> str:
     """Convert interleaved content items to a single string.
@@ -38,7 +37,7 @@ def interleaved_content_as_str(
     if content is None:
         return ""
 
-    def _process(c) -> str:
+    def _process(c: str | TextContentItem | ImageContentItem | OpenAIChatCompletionContentPartTextParam | OpenAIChatCompletionContentPartImageParam | OpenAIFile) -> str:
         if isinstance(c, str):
             return c
         elif isinstance(c, TextContentItem) or isinstance(c, OpenAIChatCompletionContentPartTextParam):

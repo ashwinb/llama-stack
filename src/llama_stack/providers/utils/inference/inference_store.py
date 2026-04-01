@@ -46,7 +46,7 @@ class InferenceStore:
         policy: list[AccessRule],
     ):
         self.reference = reference
-        self.sql_store = None
+        self.sql_store: AuthorizedSqlStore | None = None
         self.policy = policy
         self.enable_write_queue = True
 
@@ -56,7 +56,7 @@ class InferenceStore:
         self._max_write_queue_size: int = reference.max_write_queue_size
         self._num_writers: int = max(1, reference.num_writers)
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Create the necessary tables if they don't exist."""
         base_store = sqlstore_impl(self.reference)
         self.sql_store = AuthorizedSqlStore(base_store, self.policy)
