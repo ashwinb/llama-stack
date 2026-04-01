@@ -5,7 +5,7 @@
 # the root directory of this source tree.
 
 from threading import Lock
-from typing import Annotated, cast
+from typing import Annotated
 
 from pydantic import Field
 
@@ -78,7 +78,7 @@ def sqlstore_impl(reference: SqlStoreReference) -> SqlStore:
         if isinstance(backend_config, SqliteSqlStoreConfig | PostgresSqlStoreConfig):
             from .sqlalchemy_sqlstore import SqlAlchemySqlStoreImpl
 
-            config = cast(SqliteSqlStoreConfig | PostgresSqlStoreConfig, backend_config).model_copy()
+            config = backend_config.model_copy()
             instance = SqlAlchemySqlStoreImpl(config)
             _SQLSTORE_INSTANCES[backend_name] = instance
             return instance

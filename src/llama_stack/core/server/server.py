@@ -84,7 +84,7 @@ def warn_with_traceback(
 
 
 if os.environ.get("LLAMA_STACK_TRACE_WARNINGS"):
-    warnings.showwarning = warn_with_traceback
+    warnings.showwarning = warn_with_traceback  # ty: ignore[invalid-assignment]  # compatible signature with extra Any param
 
 
 def create_sse_event(data: Any) -> str:
@@ -273,7 +273,7 @@ def create_dynamic_typed_route(func: Any, method: str, route: str) -> Callable[.
                     from llama_stack.core.testing_context import TEST_CONTEXT
 
                     context_vars.append(TEST_CONTEXT)
-                gen: Any = preserve_contexts_async_generator(sse_generator(func(**kwargs)), context_vars)  # type: ignore[arg-type]
+                gen: Any = preserve_contexts_async_generator(sse_generator(func(**kwargs)), context_vars)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]  # sse_generator returns AsyncGenerator
                 return StreamingResponse(gen, media_type="text/event-stream")
             else:
                 value = func(**kwargs)
@@ -317,7 +317,7 @@ def create_dynamic_typed_route(func: Any, method: str, route: str) -> Callable[.
             ]
         )
 
-    route_handler.__signature__ = sig.replace(parameters=new_params)  # type: ignore[attr-defined]
+    route_handler.__signature__ = sig.replace(parameters=new_params)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]  # __signature__ set dynamically
 
     return route_handler
 
@@ -548,7 +548,7 @@ def create_app() -> StackApp:
 
             impl_method = getattr(impl, route.name)
             # Filter out HEAD method since it's automatically handled by FastAPI for GET routes
-            available_methods = [m for m in route.methods if m != "HEAD"]
+            available_methods = [m for m in route.methods if m != "HEAD"] if route.methods else []
             if not available_methods:
                 raise ValueError(f"No methods found for {route.name} on {impl}")
             method = available_methods[0]
