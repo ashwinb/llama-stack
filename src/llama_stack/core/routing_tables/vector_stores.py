@@ -7,8 +7,11 @@
 from typing import Any
 
 from llama_stack.core.datatypes import (
+    AccessRule,
+    RoutedProtocol,
     VectorStoreWithOwner,
 )
+from llama_stack.core.store import DistributionRegistry
 from llama_stack.log import get_logger
 
 # Removed VectorStores import to avoid exposing public API
@@ -51,12 +54,12 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
 
     def __init__(
         self,
-        impls_by_provider_id: dict[str, Any],
-        dist_registry: Any,
-        policy: list[Any],
+        impls_by_provider_id: dict[str, RoutedProtocol],
+        dist_registry: DistributionRegistry,
+        policy: list[AccessRule],
     ) -> None:
         super().__init__(impls_by_provider_id, dist_registry, policy)
-        self.vector_io_router = None  # Will be set post-instantiation
+        self.vector_io_router: Any = None  # Will be set post-instantiation
 
     # Internal methods only - no public API exposure
 
@@ -72,7 +75,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         provider_id: str | None = None,
         provider_vector_store_id: str | None = None,
         vector_store_name: str | None = None,
-    ) -> Any:
+    ) -> VectorStoreWithOwner:
         if provider_id is None:
             if len(self.impls_by_provider_id) > 0:
                 provider_id = list(self.impls_by_provider_id.keys())[0]
@@ -107,7 +110,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> None:
         await self.assert_action_allowed("update", "vector_store", request.vector_store_id)
         provider = await self.get_provider_impl(request.vector_store_id)
-        return await provider.insert_chunks(request)
+        return await provider.insert_chunks(request)  # ty:ignore[unresolved-attribute]
 
     async def query_chunks(
         self,
@@ -115,7 +118,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> QueryChunksResponse:
         await self.assert_action_allowed("read", "vector_store", request.vector_store_id)
         provider = await self.get_provider_impl(request.vector_store_id)
-        return await provider.query_chunks(request)
+        return await provider.query_chunks(request)  # ty:ignore[unresolved-attribute]
 
     async def openai_retrieve_vector_store(
         self,
@@ -123,7 +126,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreObject:
         await self.assert_action_allowed("read", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_retrieve_vector_store(vector_store_id)
+        return await provider.openai_retrieve_vector_store(vector_store_id)  # ty:ignore[unresolved-attribute]
 
     async def openai_update_vector_store(
         self,
@@ -132,7 +135,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreObject:
         await self.assert_action_allowed("update", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_update_vector_store(vector_store_id, request)
+        return await provider.openai_update_vector_store(vector_store_id, request)  # ty:ignore[unresolved-attribute]
 
     async def openai_delete_vector_store(
         self,
@@ -140,7 +143,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreDeleteResponse:
         await self.assert_action_allowed("delete", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        result = await provider.openai_delete_vector_store(vector_store_id)
+        result = await provider.openai_delete_vector_store(vector_store_id)  # ty:ignore[unresolved-attribute]
         await self.unregister_vector_store(vector_store_id)
         return result
 
@@ -163,7 +166,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreSearchResponsePage:
         await self.assert_action_allowed("read", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_search_vector_store(vector_store_id, request)
+        return await provider.openai_search_vector_store(vector_store_id, request)  # ty:ignore[unresolved-attribute]
 
     async def openai_attach_file_to_vector_store(
         self,
@@ -172,7 +175,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreFileObject:
         await self.assert_action_allowed("update", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_attach_file_to_vector_store(vector_store_id, request)
+        return await provider.openai_attach_file_to_vector_store(vector_store_id, request)  # ty:ignore[unresolved-attribute]
 
     async def openai_list_files_in_vector_store(
         self,
@@ -185,7 +188,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreListFilesResponse:
         await self.assert_action_allowed("read", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_list_files_in_vector_store(
+        return await provider.openai_list_files_in_vector_store(  # ty:ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             limit=limit,
             order=order,
@@ -201,7 +204,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreFileObject:
         await self.assert_action_allowed("read", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_retrieve_vector_store_file(
+        return await provider.openai_retrieve_vector_store_file(  # ty:ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             file_id=file_id,
         )
@@ -216,7 +219,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
         await self.assert_action_allowed("read", "vector_store", vector_store_id)
 
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_retrieve_vector_store_file_contents(
+        return await provider.openai_retrieve_vector_store_file_contents(  # ty:ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             file_id=file_id,
             include_embeddings=include_embeddings,
@@ -231,7 +234,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreFileObject:
         await self.assert_action_allowed("update", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_update_vector_store_file(
+        return await provider.openai_update_vector_store_file(  # ty:ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             file_id=file_id,
             request=request,
@@ -244,7 +247,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreFileDeleteResponse:
         await self.assert_action_allowed("delete", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_delete_vector_store_file(
+        return await provider.openai_delete_vector_store_file(  # ty:ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             file_id=file_id,
         )
@@ -256,7 +259,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreFileBatchObject:
         await self.assert_action_allowed("update", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_create_vector_store_file_batch(
+        return await provider.openai_create_vector_store_file_batch(  # ty:ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             params=params,
         )
@@ -268,7 +271,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreFileBatchObject:
         await self.assert_action_allowed("read", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_retrieve_vector_store_file_batch(
+        return await provider.openai_retrieve_vector_store_file_batch(  # ty:ignore[unresolved-attribute]
             batch_id=batch_id,
             vector_store_id=vector_store_id,
         )
@@ -285,7 +288,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreFilesListInBatchResponse:
         await self.assert_action_allowed("read", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_list_files_in_vector_store_file_batch(
+        return await provider.openai_list_files_in_vector_store_file_batch(  # ty:ignore[unresolved-attribute]
             batch_id=batch_id,
             vector_store_id=vector_store_id,
             after=after,
@@ -302,7 +305,7 @@ class VectorStoresRoutingTable(CommonRoutingTableImpl):
     ) -> VectorStoreFileBatchObject:
         await self.assert_action_allowed("update", "vector_store", vector_store_id)
         provider = await self.get_provider_impl(vector_store_id)
-        return await provider.openai_cancel_vector_store_file_batch(
+        return await provider.openai_cancel_vector_store_file_batch(  # ty:ignore[unresolved-attribute]
             batch_id=batch_id,
             vector_store_id=vector_store_id,
         )

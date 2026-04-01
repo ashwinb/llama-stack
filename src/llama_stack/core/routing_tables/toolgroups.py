@@ -6,7 +6,7 @@
 
 from typing import Any
 
-from llama_stack.core.datatypes import AuthenticationRequiredError, ToolGroupWithOwner
+from llama_stack.core.datatypes import AuthenticationRequiredError, RoutedProtocol, ToolGroupWithOwner
 from llama_stack.log import get_logger
 from llama_stack_api import (
     URL,
@@ -48,7 +48,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
     tool_to_toolgroup: dict[str, str] = {}
 
     # overridden
-    async def get_provider_impl(self, routing_key: str, provider_id: str | None = None) -> Any:
+    async def get_provider_impl(self, routing_key: str, provider_id: str | None = None) -> RoutedProtocol:
         # we don't index tools in the registry anymore, but only keep a cache of them by toolgroup_id
         # TODO: we may want to invalidate the cache (for a given toolgroup_id) every once in a while?
 
@@ -88,9 +88,9 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
 
         return ListToolDefsResponse(data=all_tools)
 
-    async def _index_tools(self, toolgroup: ToolGroup, authorization: str | None = None):
+    async def _index_tools(self, toolgroup: ToolGroup, authorization: str | None = None) -> None:
         provider_impl = await super().get_provider_impl(toolgroup.identifier, toolgroup.provider_id)
-        tooldefs_response = await provider_impl.list_runtime_tools(
+        tooldefs_response = await provider_impl.list_runtime_tools(  # ty: ignore[unresolved-attribute]  # provider is ToolRuntime
             toolgroup.identifier, toolgroup.mcp_endpoint, authorization=authorization
         )
 

@@ -70,7 +70,7 @@ class ToolRuntimeRouter(ToolRuntime):
             )
 
             # Execute tool invocation
-            result = await provider.invoke_tool(
+            result = await provider.invoke_tool(  # ty:ignore[unresolved-attribute]
                 tool_name=tool_name,
                 kwargs=kwargs,
                 authorization=authorization,
