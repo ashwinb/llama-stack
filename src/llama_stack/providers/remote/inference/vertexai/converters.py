@@ -48,7 +48,7 @@ from llama_stack_api.inference.models import (
 logger = get_logger(__name__, category="inference")
 
 if TYPE_CHECKING:
-    from google.genai import types as genai_types
+    from google.genai import types as genai_types  # ty: ignore[unresolved-import]
 
 
 def _to_dict(obj: Any) -> dict[str, Any]:
@@ -671,7 +671,7 @@ def convert_gemini_stream_chunk_to_openai(
             delta=OpenAIChoiceDelta(
                 role=role,
                 content=cd.text,
-                tool_calls=cd.tool_calls or None,  # type: ignore[arg-type]
+                tool_calls=cd.tool_calls or None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
                 reasoning_content=cd.reasoning_content,
             ),
             finish_reason=_resolve_stream_finish_reason(cd.finish_reason_raw, bool(cd.tool_calls)),

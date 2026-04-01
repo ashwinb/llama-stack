@@ -42,8 +42,8 @@ class PromptGuardSafetyImpl(ShieldToModerationMixin, Safety, ShieldsProtocolPriv
 
     async def initialize(self) -> None:
         # Lazy import torch and transformers to reduce startup memory (~46MB+ savings)
-        import torch
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        import torch  # ty: ignore[unresolved-import]
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer  # ty: ignore[unresolved-import]
 
         model_dir = model_local_dir(PROMPT_GUARD_MODEL)
         self.shield = PromptGuardShield(
@@ -100,7 +100,7 @@ class PromptGuardShield:
 
     async def run(self, messages: list[OpenAIMessageParam]) -> RunShieldResponse:
         message = messages[-1]
-        text = interleaved_content_as_str(message.content)
+        text = interleaved_content_as_str(message.content)  # ty: ignore[invalid-argument-type]
 
         # run model on messages and return response
         inputs = self.tokenizer(text, return_tensors="pt")
