@@ -7,7 +7,7 @@
 import importlib
 
 
-def instantiate_class_type(fully_qualified_name):
+def instantiate_class_type(fully_qualified_name: str) -> type:
     """Import and return a class from its fully qualified module path.
 
     Args:
