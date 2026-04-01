@@ -7,10 +7,12 @@
 
 from typing import Any
 
+from llama_stack_api import Safety
+
 from .config import SambaNovaSafetyConfig
 
 
-async def get_adapter_impl(config: SambaNovaSafetyConfig, _deps) -> Any:
+async def get_adapter_impl(config: SambaNovaSafetyConfig, _deps: dict[str, Any]) -> Safety:
     from .sambanova import SambaNovaSafetyAdapter
 
     impl = SambaNovaSafetyAdapter(config)
