@@ -86,10 +86,10 @@ async def get_auto_router_impl(
         await inference_store.initialize()
         api_to_dep_impl["store"] = inference_store
     elif api == Api.vector_io:
-        api_to_dep_impl["vector_stores_config"] = run_config.vector_stores
-        api_to_dep_impl["inference_api"] = deps.get(Api.inference)  # ty: ignore[invalid-argument-type]
+        api_to_dep_impl["vector_stores_config"] = run_config.vector_stores  # type: ignore[assignment]
+        api_to_dep_impl["inference_api"] = deps.get(Api.inference)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
     elif api == Api.safety:
-        api_to_dep_impl["safety_config"] = run_config.safety
+        api_to_dep_impl["safety_config"] = run_config.safety  # type: ignore[assignment]
 
     impl = api_to_routers[api.value](routing_table, **api_to_dep_impl)  # ty: ignore[invalid-argument-type]
 

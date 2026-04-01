@@ -35,13 +35,13 @@ class DatasetsRoutingTable(CommonRoutingTableImpl, Datasets):
     """Routing table for managing dataset registrations and provider lookups."""
 
     async def list_datasets(self) -> ListDatasetsResponse:
-        return ListDatasetsResponse(data=await self.get_all_with_type(ResourceType.dataset.value))  # ty: ignore[invalid-argument-type]
+        return ListDatasetsResponse(data=await self.get_all_with_type(ResourceType.dataset.value))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     async def get_dataset(self, request: GetDatasetRequest) -> Dataset:
         dataset = await self.get_object_by_identifier("dataset", request.dataset_id)
         if dataset is None:
             raise DatasetNotFoundError(request.dataset_id)
-        return dataset  # ty: ignore[invalid-return-type]
+        return dataset  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
 
     async def register_dataset(self, request: RegisterDatasetRequest) -> Dataset:
         purpose = request.purpose
@@ -79,7 +79,7 @@ class DatasetsRoutingTable(CommonRoutingTableImpl, Datasets):
         dataset = DatasetWithOwner(
             identifier=dataset_id,
             provider_resource_id=provider_dataset_id,
-            provider_id=provider_id,  # ty: ignore[invalid-argument-type]
+            provider_id=provider_id,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
             purpose=purpose,
             source=source,
             metadata=metadata,
@@ -90,4 +90,4 @@ class DatasetsRoutingTable(CommonRoutingTableImpl, Datasets):
 
     async def unregister_dataset(self, request: UnregisterDatasetRequest) -> None:
         dataset = await self.get_dataset(GetDatasetRequest(dataset_id=request.dataset_id))
-        await self.unregister_object(dataset)  # ty: ignore[invalid-argument-type]
+        await self.unregister_object(dataset)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

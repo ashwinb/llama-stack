@@ -67,7 +67,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
                 toolgroup_id = group_id
             toolgroups = [await self.get_tool_group(toolgroup_id)]
         else:
-            toolgroups = await self.get_all_with_type("tool_group")
+            toolgroups = await self.get_all_with_type("tool_group")  # type: ignore[assignment]
 
         all_tools = []
         for toolgroup in toolgroups:
@@ -103,13 +103,13 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
             self.tool_to_toolgroup[tool.name] = toolgroup.identifier
 
     async def list_tool_groups(self) -> ListToolGroupsResponse:
-        return ListToolGroupsResponse(data=await self.get_all_with_type("tool_group"))  # ty: ignore[invalid-argument-type]
+        return ListToolGroupsResponse(data=await self.get_all_with_type("tool_group"))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     async def get_tool_group(self, toolgroup_id: str) -> ToolGroup:
         tool_group = await self.get_object_by_identifier("tool_group", toolgroup_id)
         if tool_group is None:
             raise ToolGroupNotFoundError(toolgroup_id)
-        return tool_group  # ty: ignore[invalid-return-type]
+        return tool_group  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
 
     async def get_tool(self, tool_name: str) -> ToolDef:
         if tool_name in self.tool_to_toolgroup:
@@ -143,7 +143,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
             await self._index_tools(toolgroup)
 
     async def unregister_toolgroup(self, toolgroup_id: str) -> None:
-        await self.unregister_object(await self.get_tool_group(toolgroup_id))  # ty: ignore[invalid-argument-type]
+        await self.unregister_object(await self.get_tool_group(toolgroup_id))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     async def shutdown(self) -> None:
         pass

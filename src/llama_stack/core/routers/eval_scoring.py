@@ -141,7 +141,7 @@ class EvalRouter(Eval):
         )
         logger.debug("EvalRouter.run_eval", benchmark_id=resolved_request.benchmark_id)
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        return await provider.run_eval(resolved_request)
+        return await provider.run_eval(resolved_request)  # type: ignore[no-any-return]
 
     async def evaluate_rows(
         self,
@@ -180,7 +180,7 @@ class EvalRouter(Eval):
             input_rows_count=len(resolved_request.input_rows),
         )
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        return await provider.evaluate_rows(resolved_request)
+        return await provider.evaluate_rows(resolved_request)  # type: ignore[no-any-return]
 
     async def job_status(
         self,
@@ -207,7 +207,7 @@ class EvalRouter(Eval):
             "EvalRouter.job_status", benchmark_id=resolved_request.benchmark_id, job_id=resolved_request.job_id
         )
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        return await provider.job_status(resolved_request)
+        return await provider.job_status(resolved_request)  # type: ignore[no-any-return]
 
     async def job_cancel(
         self,
@@ -261,4 +261,4 @@ class EvalRouter(Eval):
             "EvalRouter.job_result", benchmark_id=resolved_request.benchmark_id, job_id=resolved_request.job_id
         )
         provider = await self.routing_table.get_provider_impl(resolved_request.benchmark_id)
-        return await provider.job_result(resolved_request)
+        return await provider.job_result(resolved_request)  # type: ignore[no-any-return]

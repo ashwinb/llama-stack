@@ -52,7 +52,7 @@ class DatasetIORouter(DatasetIO):
             metadata=metadata,
             dataset_id=dataset_id,
         )
-        await self.routing_table.register_dataset(  # ty: ignore[unresolved-attribute]
+        await self.routing_table.register_dataset(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
             purpose=purpose,
             source=source,
             metadata=metadata,
@@ -67,7 +67,7 @@ class DatasetIORouter(DatasetIO):
             limit=request.limit,
         )
         provider = await self.routing_table.get_provider_impl(request.dataset_id)
-        return await provider.iterrows(
+        return await provider.iterrows(  # type: ignore[no-any-return]
             dataset_id=request.dataset_id,
             start_index=request.start_index,
             limit=request.limit,
@@ -76,7 +76,7 @@ class DatasetIORouter(DatasetIO):
     async def append_rows(self, params: AppendRowsParams) -> None:
         logger.debug("DatasetIORouter.append_rows", dataset_id=params.dataset_id, rows_count=len(params.rows))
         provider = await self.routing_table.get_provider_impl(params.dataset_id)
-        return await provider.append_rows(
+        return await provider.append_rows(  # type: ignore[no-any-return]
             dataset_id=params.dataset_id,
             rows=params.rows,
         )

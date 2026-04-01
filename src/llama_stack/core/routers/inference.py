@@ -101,10 +101,10 @@ class InferenceRouter(Inference):
             metadata=metadata,
             model_type=model_type,
         )
-        await self.routing_table.register_model(request)  # ty: ignore[unresolved-attribute]
+        await self.routing_table.register_model(request)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
     async def _get_model_provider(self, model_id: str, expected_model_type: ModelType | str) -> tuple[Inference, str]:
-        model = await self.routing_table.get_object_by_identifier("model", model_id)  # ty: ignore[unresolved-attribute]
+        model = await self.routing_table.get_object_by_identifier("model", model_id)  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         if model:
             if model.model_type != expected_model_type:
                 raise ModelTypeError(model_id, model.model_type, expected_model_type)
@@ -128,7 +128,7 @@ class InferenceRouter(Inference):
         provider_id, provider_resource_id = splits
 
         # Check if provider exists
-        if provider_id not in self.routing_table.impls_by_provider_id:  # ty: ignore[unresolved-attribute]
+        if provider_id not in self.routing_table.impls_by_provider_id:  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
             logger.warning("Provider not found for model", provider_id=provider_id, model_id=model_id)
             raise ModelNotFoundError(model_id)
 
@@ -137,13 +137,13 @@ class InferenceRouter(Inference):
             identifier=model_id,
             provider_id=provider_id,
             provider_resource_id=provider_resource_id,
-            model_type=expected_model_type,  # ty: ignore[invalid-argument-type]
+            model_type=expected_model_type,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
             metadata={},  # Empty metadata for temporary object
         )
 
         # Perform RBAC check
         user = get_authenticated_user()
-        if not is_action_allowed(self.routing_table.policy, Action.READ, temp_model, user):  # ty: ignore[unresolved-attribute,invalid-argument-type]
+        if not is_action_allowed(self.routing_table.policy, Action.READ, temp_model, user):  # type: ignore[arg-type, attr-defined]  # ty: ignore[unresolved-attribute,invalid-argument-type]
             logger.debug(
                 "Access denied to model via fallback path for user",
                 model_id=model_id,
@@ -151,7 +151,7 @@ class InferenceRouter(Inference):
             )
             raise ModelNotFoundError(model_id)
 
-        return self.routing_table.impls_by_provider_id[provider_id], provider_resource_id  # ty: ignore[unresolved-attribute]
+        return self.routing_table.impls_by_provider_id[provider_id], provider_resource_id  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
     async def rerank(  # ty: ignore[invalid-method-override]
         self,
@@ -222,7 +222,7 @@ class InferenceRouter(Inference):
             return self.stream_tokens_and_compute_metrics_openai_chat(
                 response=response_stream,
                 fully_qualified_model_id=request_model_id,
-                provider_id=provider.__provider_id__,  # ty: ignore[unresolved-attribute]
+                provider_id=provider.__provider_id__,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
                 messages=params.messages,
             )
 
@@ -287,7 +287,7 @@ class InferenceRouter(Inference):
     async def health(self) -> dict[str, HealthResponse]:
         health_statuses = {}
         timeout = 1  # increasing the timeout to 1 second for health checks
-        for provider_id, impl in self.routing_table.impls_by_provider_id.items():  # ty: ignore[unresolved-attribute]
+        for provider_id, impl in self.routing_table.impls_by_provider_id.items():  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
             try:
                 # check if the provider has a health method
                 if not hasattr(impl, "health"):
@@ -434,7 +434,7 @@ class InferenceRouter(Inference):
                     message = OpenAIChatCompletionResponseMessage(
                         role="assistant",
                         content=content_str if content_str else None,
-                        tool_calls=assembled_tool_calls if assembled_tool_calls else None,  # ty: ignore[invalid-argument-type]
+                        tool_calls=assembled_tool_calls if assembled_tool_calls else None,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
                     )
                     logprobs_content = choice_data["logprobs_content_parts"]
                     final_logprobs = OpenAIChoiceLogprobs(content=logprobs_content) if logprobs_content else None

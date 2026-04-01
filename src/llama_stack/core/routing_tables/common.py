@@ -32,7 +32,7 @@ def get_impl_api(p: Any) -> Api:
     Returns:
         The Api enum value for this provider.
     """
-    return p.__provider_spec__.api
+    return p.__provider_spec__.api  # type: ignore[no-any-return]
 
 
 async def register_object_with_provider(obj: RoutableObject, p: Any) -> RoutableObject:
@@ -53,19 +53,19 @@ async def register_object_with_provider(obj: RoutableObject, p: Any) -> Routable
     assert obj.provider_id != "remote", "Remote provider should not be registered"
 
     if api == Api.inference:
-        return await p.register_model(obj)
+        return await p.register_model(obj)  # type: ignore[no-any-return]
     elif api == Api.safety:
-        return await p.register_shield(obj)
+        return await p.register_shield(obj)  # type: ignore[no-any-return]
     elif api == Api.vector_io:
-        return await p.register_vector_store(obj)
+        return await p.register_vector_store(obj)  # type: ignore[no-any-return]
     elif api == Api.datasetio:
-        return await p.register_dataset(obj)
+        return await p.register_dataset(obj)  # type: ignore[no-any-return]
     elif api == Api.scoring:
-        return await p.register_scoring_function(obj)
+        return await p.register_scoring_function(obj)  # type: ignore[no-any-return]
     elif api == Api.eval:
-        return await p.register_benchmark(obj)
+        return await p.register_benchmark(obj)  # type: ignore[no-any-return]
     elif api == Api.tool_runtime:
-        return await p.register_toolgroup(obj)
+        return await p.register_toolgroup(obj)  # type: ignore[no-any-return]
     else:
         raise ValueError(f"Unknown API {api} for registering object with provider")
 
@@ -82,19 +82,19 @@ async def unregister_object_from_provider(obj: RoutableObject, p: Any) -> None:
     """
     api = get_impl_api(p)
     if api == Api.vector_io:
-        return await p.unregister_vector_store(obj.identifier)
+        return await p.unregister_vector_store(obj.identifier)  # type: ignore[no-any-return]
     elif api == Api.inference:
-        return await p.unregister_model(obj.identifier)
+        return await p.unregister_model(obj.identifier)  # type: ignore[no-any-return]
     elif api == Api.safety:
-        return await p.unregister_shield(obj.identifier)
+        return await p.unregister_shield(obj.identifier)  # type: ignore[no-any-return]
     elif api == Api.datasetio:
-        return await p.unregister_dataset(obj.identifier)
+        return await p.unregister_dataset(obj.identifier)  # type: ignore[no-any-return]
     elif api == Api.eval:
-        return await p.unregister_benchmark(obj.identifier)
+        return await p.unregister_benchmark(obj.identifier)  # type: ignore[no-any-return]
     elif api == Api.scoring:
-        return await p.unregister_scoring_function(obj.identifier)
+        return await p.unregister_scoring_function(obj.identifier)  # type: ignore[no-any-return]
     elif api == Api.tool_runtime:
-        return await p.unregister_toolgroup(obj.identifier)
+        return await p.unregister_toolgroup(obj.identifier)  # type: ignore[no-any-return]
     else:
         raise ValueError(f"Unregister not supported for {api}")
 
@@ -131,25 +131,25 @@ class CommonRoutingTableImpl(RoutingTable):
         for pid, p in self.impls_by_provider_id.items():
             api = get_impl_api(p)
             if api == Api.inference:
-                p.model_store = self  # ty: ignore[invalid-assignment]
+                p.model_store = self  # type: ignore[union-attr]  # ty: ignore[invalid-assignment]
             elif api == Api.safety:
-                p.shield_store = self  # ty: ignore[invalid-assignment]
+                p.shield_store = self  # type: ignore[union-attr]  # ty: ignore[invalid-assignment]
             elif api == Api.vector_io:
-                p.vector_store_store = self  # ty: ignore[invalid-assignment]
+                p.vector_store_store = self  # type: ignore[union-attr]  # ty: ignore[invalid-assignment]
             elif api == Api.datasetio:
-                p.dataset_store = self  # ty: ignore[invalid-assignment]
+                p.dataset_store = self  # type: ignore[union-attr]  # ty: ignore[invalid-assignment]
             elif api == Api.scoring:
-                p.scoring_function_store = self  # ty: ignore[invalid-assignment]
-                scoring_functions = await p.list_scoring_functions()  # ty: ignore[unresolved-attribute]
+                p.scoring_function_store = self  # type: ignore[union-attr]  # ty: ignore[invalid-assignment]
+                scoring_functions = await p.list_scoring_functions()  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
                 await add_objects(scoring_functions, pid, ScoringFnWithOwner)
             elif api == Api.eval:
-                p.benchmark_store = self  # ty: ignore[invalid-assignment]
+                p.benchmark_store = self  # type: ignore[union-attr]  # ty: ignore[invalid-assignment]
             elif api == Api.tool_runtime:
-                p.tool_store = self  # ty: ignore[invalid-assignment]
+                p.tool_store = self  # type: ignore[union-attr]  # ty: ignore[invalid-assignment]
 
     async def shutdown(self) -> None:
         for p in self.impls_by_provider_id.values():
-            await p.shutdown()  # ty: ignore[unresolved-attribute]
+            await p.shutdown()  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
 
     async def refresh(self) -> None:
         pass
@@ -207,7 +207,7 @@ class CommonRoutingTableImpl(RoutingTable):
             return None
 
         # Check if user has permission to access this object
-        if not is_action_allowed(self.policy, Action.READ, obj, get_authenticated_user()):  # ty: ignore[invalid-argument-type]
+        if not is_action_allowed(self.policy, Action.READ, obj, get_authenticated_user()):  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
             logger.debug("Access denied", resource_type=type, identifier=identifier)
             return None
 
@@ -215,8 +215,8 @@ class CommonRoutingTableImpl(RoutingTable):
 
     async def unregister_object(self, obj: RoutableObjectWithProvider) -> None:
         user = get_authenticated_user()
-        if not is_action_allowed(self.policy, Action.DELETE, obj, user):  # ty: ignore[invalid-argument-type]
-            raise AccessDeniedError(Action.DELETE, obj, user)  # ty: ignore[invalid-argument-type]
+        if not is_action_allowed(self.policy, Action.DELETE, obj, user):  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+            raise AccessDeniedError(Action.DELETE, obj, user)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         await self.dist_registry.delete(obj.type, obj.identifier)
         await unregister_object_from_provider(obj, self.impls_by_provider_id[obj.provider_id])
 
@@ -232,8 +232,8 @@ class CommonRoutingTableImpl(RoutingTable):
 
         # If object supports access control but no attributes set, use creator's attributes
         creator = get_authenticated_user()
-        if not is_action_allowed(self.policy, Action.CREATE, obj, creator):  # ty: ignore[invalid-argument-type]
-            raise AccessDeniedError(Action.CREATE, obj, creator)  # ty: ignore[invalid-argument-type]
+        if not is_action_allowed(self.policy, Action.CREATE, obj, creator):  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+            raise AccessDeniedError(Action.CREATE, obj, creator)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         if creator:
             obj.owner = creator
             logger.info("Setting owner", resource_type=obj.type, identifier=obj.identifier, owner=obj.owner.principal)
@@ -253,8 +253,8 @@ class CommonRoutingTableImpl(RoutingTable):
 
         # TODO: This needs to be fixed for all APIs once they return the registered object
         if obj.type == ResourceType.model.value:
-            await self.dist_registry.register(registered_obj)  # ty: ignore[invalid-argument-type]
-            return registered_obj  # ty: ignore[invalid-return-type]
+            await self.dist_registry.register(registered_obj)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+            return registered_obj  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
         else:
             await self.dist_registry.register(obj)
             return obj
@@ -270,8 +270,8 @@ class CommonRoutingTableImpl(RoutingTable):
         if obj is None:
             raise ValueError(f"{type.capitalize()} '{identifier}' not found")
         user = get_authenticated_user()
-        if not is_action_allowed(self.policy, action, obj, user):  # ty: ignore[invalid-argument-type]
-            raise AccessDeniedError(action, obj, user)  # ty: ignore[invalid-argument-type]
+        if not is_action_allowed(self.policy, action, obj, user):  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+            raise AccessDeniedError(action, obj, user)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     async def get_all_with_type(self, type: str) -> list[RoutableObjectWithProvider]:
         objs = await self.dist_registry.get_all()
@@ -282,7 +282,7 @@ class CommonRoutingTableImpl(RoutingTable):
             filtered_objs = [
                 obj
                 for obj in filtered_objs
-                if is_action_allowed(self.policy, Action.READ, obj, get_authenticated_user())  # ty: ignore[invalid-argument-type]
+                if is_action_allowed(self.policy, Action.READ, obj, get_authenticated_user())  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
             ]
 
         return filtered_objs
@@ -304,4 +304,4 @@ async def lookup_model(routing_table: CommonRoutingTableImpl, model_id: str) -> 
     model = await routing_table.get_object_by_identifier("model", model_id)
     if not model:
         raise ModelNotFoundError(model_id)
-    return model  # ty: ignore[invalid-return-type]
+    return model  # type: ignore[return-value]  # ty: ignore[invalid-return-type]

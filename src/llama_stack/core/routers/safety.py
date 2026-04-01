@@ -47,11 +47,11 @@ class SafetyRouter(Safety):
 
     async def register_shield(self, request: RegisterShieldRequest) -> Shield:
         logger.debug("SafetyRouter.register_shield", shield_id=request.shield_id)
-        return await self.routing_table.register_shield(request)  # ty: ignore[unresolved-attribute]
+        return await self.routing_table.register_shield(request)  # type: ignore[attr-defined, no-any-return]  # ty: ignore[unresolved-attribute]
 
     async def unregister_shield(self, identifier: str) -> None:
         logger.debug("SafetyRouter.unregister_shield", identifier=identifier)
-        return await self.routing_table.unregister_shield(UnregisterShieldRequest(identifier=identifier))  # ty: ignore[unresolved-attribute]
+        return await self.routing_table.unregister_shield(UnregisterShieldRequest(identifier=identifier))  # type: ignore[attr-defined, no-any-return]  # ty: ignore[unresolved-attribute]
 
     async def run_shield(self, request: RunShieldRequest) -> RunShieldResponse:
         with tracer.start_as_current_span(name=safety_span_name(request.shield_id)):
@@ -59,10 +59,10 @@ class SafetyRouter(Safety):
             provider = await self.routing_table.get_provider_impl(request.shield_id)
             response = await provider.run_shield(request)
             safety_request_span_attributes(request.shield_id, request.messages, response)
-        return response
+        return response  # type: ignore[no-any-return]
 
     async def run_moderation(self, request: RunModerationRequest) -> ModerationObject:
-        list_shields_response = await self.routing_table.list_shields()  # ty: ignore[unresolved-attribute]
+        list_shields_response = await self.routing_table.list_shields()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         shields = list_shields_response.data
 
         selected_shield: Shield | None = None
@@ -100,4 +100,4 @@ class SafetyRouter(Safety):
         provider = await self.routing_table.get_provider_impl(shield_id)
 
         provider_request = RunModerationRequest(input=request.input, model=provider_model)
-        return await provider.run_moderation(provider_request)
+        return await provider.run_moderation(provider_request)  # type: ignore[no-any-return]
