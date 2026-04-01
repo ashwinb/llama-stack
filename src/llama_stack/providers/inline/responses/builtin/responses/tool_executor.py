@@ -169,15 +169,15 @@ class ToolExecutor:
         )
 
         # Get templates
-        header_template = self.vector_stores_config.file_search_params.header_template
-        footer_template = self.vector_stores_config.file_search_params.footer_template
-        context_template = self.vector_stores_config.context_prompt_params.context_template
+        header_template = self.vector_stores_config.file_search_params.header_template  # ty: ignore[unresolved-attribute]  # vector_stores_config is checked above
+        footer_template = self.vector_stores_config.file_search_params.footer_template  # ty: ignore[unresolved-attribute]  # vector_stores_config is checked above
+        context_template = self.vector_stores_config.context_prompt_params.context_template  # ty: ignore[unresolved-attribute]  # vector_stores_config is checked above
 
         # Get annotation templates (use defaults if annotations disabled)
         if enable_annotations:
-            chunk_annotation_template = self.vector_stores_config.annotation_prompt_params.chunk_annotation_template
+            chunk_annotation_template = self.vector_stores_config.annotation_prompt_params.chunk_annotation_template  # ty: ignore[unresolved-attribute]  # vector_stores_config is checked above
             annotation_instruction_template = (
-                self.vector_stores_config.annotation_prompt_params.annotation_instruction_template
+                self.vector_stores_config.annotation_prompt_params.annotation_instruction_template  # ty: ignore[unresolved-attribute]  # vector_stores_config is checked above
             )
         else:
             # Use defaults from VectorStoresConfig when annotations disabled
@@ -335,10 +335,10 @@ class ToolExecutor:
                 }
                 # TODO: follow semantic conventions for Open Telemetry tool spans
                 # https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#execute-tool-span
-                with tracer.start_as_current_span("invoke_mcp_tool", attributes=attributes):
+                with tracer.start_as_current_span("invoke_mcp_tool", attributes=attributes):  # ty: ignore[invalid-argument-type]  # attributes may contain None values
                     # Pass session_manager for session reuse within request (fix for #4452)
                     result = await invoke_mcp_tool(
-                        endpoint=mcp_tool.server_url,
+                        endpoint=mcp_tool.server_url,  # ty: ignore[invalid-argument-type]  # server_url is resolved before this point
                         tool_name=function_name,
                         kwargs=tool_kwargs,
                         headers=mcp_tool.headers,
