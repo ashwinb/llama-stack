@@ -32,6 +32,7 @@ from llama_stack_api import (
     ModelType,
     OpenAIChatCompletion,
     OpenAIChatCompletionChunk,
+    OpenAIChatCompletionContentPartImageParam,
     OpenAIChatCompletionRequestWithExtraBody,
     OpenAICompletion,
     OpenAICompletionRequestWithExtraBody,
@@ -73,6 +74,13 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
     # Allow extra fields so the routing infra can inject model_store, __provider_id__, etc.
     # Allow arbitrary types for shared_ssl_context
     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
+
+    # Runtime-injected by routing_tables/common.py during provider initialization.
+    # Uses Any because the actual type (CommonRoutingTableImpl) has methods beyond
+    # the ModelStore protocol, and importing it would create circular dependencies.
+    model_store: Any = None
+    # Runtime-injected provider identifier string
+    __provider_id__: str = ""
 
     config: RemoteInferenceProviderConfig
 
@@ -158,14 +166,14 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         """
         if metadata := self.embedding_model_metadata.get(identifier):
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
                 metadata=metadata,
             )
         return Model(
-            provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+            provider_id=self.__provider_id__,
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=ModelType.llm,
@@ -290,11 +298,11 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         :return: The provider-specific model ID (e.g., "gpt-4")
         """
         # self.model_store is injected by the distribution system at runtime
-        if not await self.model_store.has_model(model):  # type: ignore[attr-defined]
+        if not await self.model_store.has_model(model):
             return model
 
         # Look up the registered model to get the provider-specific model ID
-        model_obj: Model = await self.model_store.get_model(model)  # type: ignore[attr-defined]
+        model_obj: Model = await self.model_store.get_model(model)
         # provider_resource_id is str | None, but we expect it to be str for OpenAI calls
         if model_obj.provider_resource_id is None:
             raise ValueError(f"Model {model} has no provider_resource_id")
@@ -379,7 +387,9 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             async def _localize_image_url(m: OpenAIMessageParam) -> OpenAIMessageParam:
                 if isinstance(m.content, list):
                     for c in m.content:
-                        if c.type == "image_url" and c.image_url and c.image_url.url and "http" in c.image_url.url:
+                        if not isinstance(c, OpenAIChatCompletionContentPartImageParam):
+                            continue
+                        if c.image_url and c.image_url.url and "http" in c.image_url.url:
                             localize_result = await localize_image_content(c.image_url.url)
                             if localize_result is None:
                                 raise ValueError(
@@ -501,7 +511,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
             return model
 
         if not await self.check_model_availability(model.provider_model_id):
-            raise ValueError(f"Model {model.provider_model_id} is not available from provider {self.__provider_id__}")  # type: ignore[attr-defined]
+            raise ValueError(f"Model {model.provider_model_id} is not available from provider {self.__provider_id__}")
         return model
 
     async def unregister_model(self, model_id: str) -> None:
@@ -562,7 +572,7 @@ class OpenAIMixin(NeedsRequestProviderData, ABC, BaseModel):
         """
         # First check if the model is pre-registered in the model store
         if hasattr(self, "model_store") and self.model_store:
-            qualified_model = f"{self.__provider_id__}/{model}"  # type: ignore[attr-defined]
+            qualified_model = f"{self.__provider_id__}/{model}"
             if await self.model_store.has_model(qualified_model):
                 return True
 
