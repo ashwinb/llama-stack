@@ -5,10 +5,12 @@
 # the root directory of this source tree.
 
 import importlib
+import importlib.resources
 import os
 import signal
 import subprocess
 import sys
+from typing import Any
 
 from termcolor import cprint
 
@@ -17,7 +19,7 @@ from llama_stack.log import get_logger
 log = get_logger(name=__name__, category="core")
 
 
-def formulate_run_args(image_type: str, distro_name: str) -> list:
+def formulate_run_args(image_type: str, distro_name: str) -> list[str | Any]:
     """Build the command-line arguments for starting a Llama Stack server.
 
     Args:
@@ -50,7 +52,7 @@ def formulate_run_args(image_type: str, distro_name: str) -> list:
     return run_args
 
 
-def in_notebook():
+def in_notebook() -> bool:
     """Detect whether the current code is running inside a Jupyter notebook.
 
     Returns:

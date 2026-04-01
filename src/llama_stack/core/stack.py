@@ -521,11 +521,11 @@ def replace_env_vars(config: Any, path: str = "") -> Any:
                 # is disabled so that we can skip config env variable expansion and avoid validation errors
                 if isinstance(v, dict) and "provider_id" in v:
                     try:
-                        resolved_provider_id = replace_env_vars(v["provider_id"], f"{path}[{i}].provider_id")
+                        resolved_provider_id = replace_env_vars(v["provider_id"], f"{path}[{i}].provider_id")  # ty: ignore[invalid-argument-type]  # dict key access after 'in' check
                         if resolved_provider_id == "__disabled__":
                             logger.debug(
                                 "Skipping config env variable expansion for disabled provider",
-                                v_get_provider_id=v.get("provider_id", ""),
+                                v_get_provider_id=v.get("provider_id", ""),  # ty: ignore[no-matching-overload]  # dict key access after 'in' check
                             )
                             continue
                     except EnvVarError:
@@ -539,7 +539,7 @@ def replace_env_vars(config: Any, path: str = "") -> Any:
                     for id_field in RESOURCE_ID_FIELDS:
                         if id_field in v:
                             try:
-                                resolved_id = replace_env_vars(v[id_field], f"{path}[{i}].{id_field}")
+                                resolved_id = replace_env_vars(v[id_field], f"{path}[{i}].{id_field}")  # ty: ignore[invalid-argument-type]  # dict key access after 'in' check
                                 if resolved_id is None or resolved_id == "":
                                     logger.debug(
                                         "Skipping [] with empty (conditional env var not set)",
@@ -571,7 +571,7 @@ def replace_env_vars(config: Any, path: str = "") -> Any:
         # Pattern supports bash-like syntax: := for default and :+ for conditional and a optional value
         pattern = r"\${env\.([A-Z0-9_]+)(?::([=+])([^}]*))?}"
 
-        def get_env_var(match: re.Match):
+        def get_env_var(match: re.Match[str]) -> str:
             env_var = match.group(1)
             operator = match.group(2)  # '=' for default, '+' for conditional
             value_expr = match.group(3)
@@ -660,7 +660,7 @@ def cast_distro_name_to_string(config_dict: dict[str, Any]) -> dict[str, Any]:
     return config_dict
 
 
-def add_internal_implementations(impls: dict[Api, Any], config: StackConfig, policy: list) -> None:
+def add_internal_implementations(impls: dict[Api, Any], config: StackConfig, policy: list[Any]) -> None:
     """Add internal implementations (inspect, providers, admin, etc.) to the implementations dictionary."""
     inspect_impl = DistributionInspectImpl(
         DistributionInspectConfig(config=config),
@@ -698,7 +698,7 @@ def add_internal_implementations(impls: dict[Api, Any], config: StackConfig, pol
     impls[Api.connectors] = connectors_impl
 
 
-def _initialize_storage(run_config: StackConfig):
+def _initialize_storage(run_config: StackConfig) -> None:
     kv_backends: dict[str, StorageBackendConfig] = {}
     sql_backends: dict[str, StorageBackendConfig] = {}
     for backend_name, backend_config in run_config.storage.backends.items():
@@ -720,14 +720,14 @@ def _initialize_storage(run_config: StackConfig):
 class Stack:
     """Manages the lifecycle of a Llama Stack instance, including initialization, registry refresh, and shutdown."""
 
-    def __init__(self, run_config: StackConfig, provider_registry: ProviderRegistry | None = None):
+    def __init__(self, run_config: StackConfig, provider_registry: ProviderRegistry | None = None) -> None:
         self.run_config = run_config
         self.provider_registry = provider_registry
-        self.impls = None
+        self.impls: dict[Api, Any] | None = None
 
     # Produces a stack of providers for the given run config. Not all APIs may be
     # asked for in the run config.
-    async def initialize(self):
+    async def initialize(self) -> None:
         if "LLAMA_STACK_TEST_INFERENCE_MODE" in os.environ:
             from llama_stack.testing.api_recorder import setup_api_recording
 
@@ -741,7 +741,8 @@ class Stack:
         stores = self.run_config.storage.stores
         if not stores.metadata:
             raise ValueError("storage.stores.metadata must be configured with a kv_* backend")
-        dist_registry, _ = await create_dist_registry(stores.metadata, self.run_config.distro_name)
+        distro_name = self.run_config.distro_name or "default"
+        dist_registry, _ = await create_dist_registry(stores.metadata, distro_name)
         policy = self.run_config.server.auth.access_policy if self.run_config.server.auth else []
 
         internal_impls = {}
@@ -770,13 +771,13 @@ class Stack:
         await validate_safety_config(self.run_config.safety, impls)
         self.impls = impls
 
-    def create_registry_refresh_task(self):
+    def create_registry_refresh_task(self) -> None:
         assert self.impls is not None, "Must call initialize() before starting"
 
         global REGISTRY_REFRESH_TASK
         REGISTRY_REFRESH_TASK = asyncio.create_task(refresh_registry_task(self.impls))
 
-        def cb(task):
+        def cb(task: asyncio.Task[None]) -> None:
             import traceback
 
             if task.cancelled():
@@ -789,7 +790,9 @@ class Stack:
 
         REGISTRY_REFRESH_TASK.add_done_callback(cb)
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
+        if self.impls is None:
+            return
         for impl in self.impls.values():
             impl_name = impl.__class__.__name__
             logger.debug("Shutting down", impl_name=impl_name)
@@ -829,7 +832,7 @@ class Stack:
             logger.exception("Failed to shutdown SQL store backends", error=str(e))
 
 
-async def refresh_registry_once(impls: dict[Api, Any]):
+async def refresh_registry_once(impls: dict[Api, Any]) -> None:
     """Refresh all routing table registries once by calling their refresh methods."""
     logger.debug("refreshing registry")
     routing_tables = [v for v in impls.values() if isinstance(v, CommonRoutingTableImpl)]
@@ -837,7 +840,7 @@ async def refresh_registry_once(impls: dict[Api, Any]):
         await routing_table.refresh()
 
 
-async def refresh_registry_task(impls: dict[Api, Any]):
+async def refresh_registry_task(impls: dict[Api, Any]) -> None:
     """Background task that periodically refreshes routing table registries."""
     logger.info("starting registry refresh task")
     while True:
@@ -922,7 +925,7 @@ def run_config_from_dynamic_config_spec(
 
         # call method "sample_run_config" on the provider spec config class
         provider_config_type = instantiate_class_type(provider_spec.config_class)
-        provider_config = replace_env_vars(provider_config_type.sample_run_config(__distro_dir__=str(distro_dir)))
+        provider_config = replace_env_vars(provider_config_type.sample_run_config(__distro_dir__=str(distro_dir)))  # ty: ignore[unresolved-attribute]  # dynamic class loaded at runtime
 
         # Apply config overrides
         provider_config.update(config_overrides)
