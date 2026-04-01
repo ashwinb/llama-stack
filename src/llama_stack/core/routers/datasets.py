@@ -52,7 +52,7 @@ class DatasetIORouter(DatasetIO):
             metadata=metadata,
             dataset_id=dataset_id,
         )
-        await self.routing_table.register_dataset(
+        await self.routing_table.register_dataset(  # ty:ignore[unresolved-attribute]
             purpose=purpose,
             source=source,
             metadata=metadata,
