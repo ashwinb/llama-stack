@@ -131,21 +131,21 @@ class CommonRoutingTableImpl(RoutingTable):
         for pid, p in self.impls_by_provider_id.items():
             api = get_impl_api(p)
             if api == Api.inference:
-                p.model_store = self
+                p.model_store = self  # type: ignore[attr-defined]  # runtime-injected, declared on OpenAIMixin
             elif api == Api.safety:
-                p.shield_store = self
+                p.shield_store = self  # type: ignore[attr-defined]  # runtime-injected
             elif api == Api.vector_io:
-                p.vector_store_store = self
+                p.vector_store_store = self  # type: ignore[attr-defined]  # runtime-injected
             elif api == Api.datasetio:
-                p.dataset_store = self
+                p.dataset_store = self  # type: ignore[attr-defined]  # runtime-injected
             elif api == Api.scoring:
-                p.scoring_function_store = self
-                scoring_functions = await p.list_scoring_functions()
+                p.scoring_function_store = self  # type: ignore[attr-defined]  # runtime-injected
+                scoring_functions = await p.list_scoring_functions()  # type: ignore[attr-defined]  # runtime-injected
                 await add_objects(scoring_functions, pid, ScoringFnWithOwner)
             elif api == Api.eval:
-                p.benchmark_store = self
+                p.benchmark_store = self  # type: ignore[attr-defined]  # runtime-injected
             elif api == Api.tool_runtime:
-                p.tool_store = self
+                p.tool_store = self  # type: ignore[attr-defined]  # runtime-injected
 
     async def shutdown(self) -> None:
         for p in self.impls_by_provider_id.values():
