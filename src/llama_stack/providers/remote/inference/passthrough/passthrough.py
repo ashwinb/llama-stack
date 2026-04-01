@@ -60,11 +60,11 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
             custom_metadata = getattr(model_data, "custom_metadata", {}) or {}
 
             # Prefix identifier with provider ID for local registry
-            local_identifier = f"{self.__provider_id__}/{downstream_model_id}"
+            local_identifier = f"{self.__provider_id__}/{downstream_model_id}"  # ty: ignore[unresolved-attribute]  # runtime-injected by routing table
 
             model = Model(
                 identifier=local_identifier,
-                provider_id=self.__provider_id__,
+                provider_id=self.__provider_id__,  # ty: ignore[unresolved-attribute]  # runtime-injected by routing table
                 provider_resource_id=downstream_model_id,
                 model_type=custom_metadata.get("model_type", "llm"),
                 metadata=custom_metadata,
