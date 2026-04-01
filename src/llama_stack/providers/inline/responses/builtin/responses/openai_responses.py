@@ -53,6 +53,11 @@ from llama_stack_api import (
     OpenAIResponseMessage,
     OpenAIResponseObject,
     OpenAIResponseObjectStream,
+    OpenAIResponseObjectStreamResponseCompleted,
+    OpenAIResponseObjectStreamResponseFailed,
+    OpenAIResponseObjectStreamResponseInProgress,
+    OpenAIResponseObjectStreamResponseIncomplete,
+    OpenAIResponseObjectStreamResponseOutputItemDone,
     OpenAIResponsePrompt,
     OpenAIResponseReasoning,
     OpenAIResponseText,
@@ -443,7 +448,9 @@ class OpenAIResponsesImpl:
         :param order: The order to return the input items in.
         :returns: An ListOpenAIResponseInputItem.
         """
-        return await self.responses_store.list_response_input_items(response_id, after, before, include, limit, order)
+        # Convert ResponseItemInclude (StrEnum) to plain strings for the store
+        include_strs: list[str] | None = [str(v) for v in include] if include else None
+        return await self.responses_store.list_response_input_items(response_id, after, before, include_strs, limit, order)
 
     async def _store_response(
         self,
@@ -538,65 +545,66 @@ class OpenAIResponsesImpl:
         :param output_items: Accumulated output items so far.
         """
         try:
-            match stream_chunk.type:
-                case "response.in_progress":
-                    # Initial persistence when response starts
-                    in_progress_response = stream_chunk.response
-                    await self.responses_store.upsert_response_object(
-                        response_object=in_progress_response,
-                        input=input_items,
-                        messages=[],
-                    )
+            if isinstance(stream_chunk, OpenAIResponseObjectStreamResponseInProgress):
+                # Initial persistence when response starts
+                in_progress_response = stream_chunk.response
+                await self.responses_store.upsert_response_object(
+                    response_object=in_progress_response,
+                    input=input_items,
+                    messages=[],
+                )
 
-                case "response.output_item.done":
-                    # Incremental update when an output item completes (tool call, message)
-                    current_snapshot = orchestrator._snapshot_response(
-                        status="in_progress",
-                        outputs=output_items,
+            elif isinstance(stream_chunk, OpenAIResponseObjectStreamResponseOutputItemDone):
+                # Incremental update when an output item completes (tool call, message)
+                current_snapshot = orchestrator._snapshot_response(
+                    status="in_progress",
+                    outputs=output_items,
+                )
+                # Get current messages (filter out system messages)
+                messages_to_store = list(
+                    filter(
+                        lambda x: not isinstance(x, OpenAISystemMessageParam),
+                        orchestrator.final_messages or orchestrator.ctx.messages,
                     )
-                    # Get current messages (filter out system messages)
-                    messages_to_store = list(
-                        filter(
-                            lambda x: not isinstance(x, OpenAISystemMessageParam),
-                            orchestrator.final_messages or orchestrator.ctx.messages,
-                        )
-                    )
-                    await self.responses_store.upsert_response_object(
-                        response_object=current_snapshot,
-                        input=input_items,
-                        messages=messages_to_store,
-                    )
+                )
+                await self.responses_store.upsert_response_object(
+                    response_object=current_snapshot,
+                    input=input_items,
+                    messages=messages_to_store,
+                )
 
-                case "response.completed" | "response.incomplete":
-                    # Final persistence when response finishes
-                    final_response = stream_chunk.response
-                    messages_to_store = list(
-                        filter(
-                            lambda x: not isinstance(x, OpenAISystemMessageParam),
-                            orchestrator.final_messages,
-                        )
+            elif isinstance(
+                stream_chunk, OpenAIResponseObjectStreamResponseCompleted | OpenAIResponseObjectStreamResponseIncomplete
+            ):
+                # Final persistence when response finishes
+                final_response = stream_chunk.response
+                messages_to_store = list(
+                    filter(
+                        lambda x: not isinstance(x, OpenAISystemMessageParam),
+                        orchestrator.final_messages,
                     )
-                    await self.responses_store.upsert_response_object(
-                        response_object=final_response,
-                        input=input_items,
-                        messages=messages_to_store,
-                    )
+                )
+                await self.responses_store.upsert_response_object(
+                    response_object=final_response,
+                    input=input_items,
+                    messages=messages_to_store,
+                )
 
-                case "response.failed":
-                    # Persist failed state so GET shows error
-                    failed_response = stream_chunk.response
-                    # Preserve any accumulated non-system messages for failed responses
-                    messages_to_store = list(
-                        filter(
-                            lambda x: not isinstance(x, OpenAISystemMessageParam),
-                            orchestrator.final_messages or orchestrator.ctx.messages,
-                        )
+            elif isinstance(stream_chunk, OpenAIResponseObjectStreamResponseFailed):
+                # Persist failed state so GET shows error
+                failed_response = stream_chunk.response
+                # Preserve any accumulated non-system messages for failed responses
+                messages_to_store = list(
+                    filter(
+                        lambda x: not isinstance(x, OpenAISystemMessageParam),
+                        orchestrator.final_messages or orchestrator.ctx.messages,
                     )
-                    await self.responses_store.upsert_response_object(
-                        response_object=failed_response,
-                        input=input_items,
-                        messages=messages_to_store,
-                    )
+                )
+                await self.responses_store.upsert_response_object(
+                    response_object=failed_response,
+                    input=input_items,
+                    messages=messages_to_store,
+                )
         except Exception as e:
             # Best-effort persistence: log error but don't fail the stream
             logger.warning("Failed to persist streaming state", chunk_type=stream_chunk.type, error=str(e))
@@ -756,39 +764,39 @@ class OpenAIResponsesImpl:
             final_event_type = None
             failed_response = None
             async for stream_chunk in stream_gen:
-                match stream_chunk.type:
-                    case "response.completed" | "response.incomplete":
-                        if final_response is not None:
-                            logger.error(
-                                "The response stream produced multiple terminal events, when it should produce exactly one",
-                                response_id=stream_chunk.response.id,
-                                first_terminal_event=final_event_type,
-                                second_terminal_event=stream_chunk.type,
-                                model=model,
-                                conversation=conversation,
-                                previous_response_id=previous_response_id,
-                            )
-                            raise InternalServerError()
-                        final_response = stream_chunk.response
-                        final_event_type = stream_chunk.type
-                    case "response.failed":
-                        failed_response = stream_chunk.response
-                        error_message = (
-                            failed_response.error.message
-                            if failed_response.error
-                            else "response failed but no error message was provided"
-                        )
+                if isinstance(
+                    stream_chunk,
+                    OpenAIResponseObjectStreamResponseCompleted | OpenAIResponseObjectStreamResponseIncomplete,
+                ):
+                    if final_response is not None:
                         logger.error(
-                            "response creation failed",
-                            error_message=error_message,
-                            response_id=failed_response.id,
+                            "The response stream produced multiple terminal events, when it should produce exactly one",
+                            response_id=stream_chunk.response.id,
+                            first_terminal_event=final_event_type,
+                            second_terminal_event=stream_chunk.type,
                             model=model,
+                            conversation=conversation,
+                            previous_response_id=previous_response_id,
                         )
-                        # Surface the provider message — it may be actionable (e.g. context window exceeded)
-                        # and is already visible to callers in streaming mode via the response.failed event.
-                        raise InternalServerError(error_message)
-                    case _:
-                        pass  # Other event types don't have .response
+                        raise InternalServerError()
+                    final_response = stream_chunk.response
+                    final_event_type = stream_chunk.type
+                elif isinstance(stream_chunk, OpenAIResponseObjectStreamResponseFailed):
+                    failed_response = stream_chunk.response
+                    error_message = (
+                        failed_response.error.message
+                        if failed_response.error
+                        else "response failed but no error message was provided"
+                    )
+                    logger.error(
+                        "response creation failed",
+                        error_message=error_message,
+                        response_id=failed_response.id,
+                        model=model,
+                    )
+                    # Surface the provider message — it may be actionable (e.g. context window exceeded)
+                    # and is already visible to callers in streaming mode via the response.failed event.
+                    raise InternalServerError(error_message)
 
             if final_response is None:
                 logger.error(
@@ -841,7 +849,9 @@ class OpenAIResponsesImpl:
         created_at = int(time.time())
 
         # Normalize input to list format for storage
-        input_items = [OpenAIResponseMessage(content=input, role="user")] if isinstance(input, str) else input
+        input_items: list[OpenAIResponseInput] = (
+            [OpenAIResponseMessage(content=input, role="user")] if isinstance(input, str) else list(input)
+        )
 
         # Create initial queued response
         queued_response = OpenAIResponseObject(
@@ -993,11 +1003,13 @@ class OpenAIResponsesImpl:
                 logger.info("Background response was cancelled during processing", response_id=response_id)
                 return
 
-            match stream_chunk.type:
-                case "response.completed" | "response.incomplete" | "response.failed":
-                    result_response = stream_chunk.response
-                case _:
-                    pass
+            if isinstance(
+                stream_chunk,
+                OpenAIResponseObjectStreamResponseCompleted
+                | OpenAIResponseObjectStreamResponseIncomplete
+                | OpenAIResponseObjectStreamResponseFailed,
+            ):
+                result_response = stream_chunk.response
 
         if result_response is not None:
             # Check if response was cancelled before final update to avoid race condition
@@ -1143,16 +1155,15 @@ class OpenAIResponsesImpl:
             input_items_for_storage = self._prepare_input_items_for_storage(all_input)
 
             async for stream_chunk in orchestrator.create_response():
-                match stream_chunk.type:
-                    case "response.completed" | "response.incomplete":
-                        final_response = stream_chunk.response
-                    case "response.failed":
-                        failed_response = stream_chunk.response
-                    case "response.output_item.done":
-                        item = stream_chunk.item
-                        output_items.append(item)
-                    case _:
-                        pass  # Other event types
+                if isinstance(
+                    stream_chunk,
+                    OpenAIResponseObjectStreamResponseCompleted | OpenAIResponseObjectStreamResponseIncomplete,
+                ):
+                    final_response = stream_chunk.response
+                elif isinstance(stream_chunk, OpenAIResponseObjectStreamResponseFailed):
+                    failed_response = stream_chunk.response
+                elif isinstance(stream_chunk, OpenAIResponseObjectStreamResponseOutputItemDone):
+                    output_items.append(stream_chunk.item)
 
                 # Incremental persistence: persist on significant state changes
                 # This enables clients to poll GET /v1/responses/{response_id} during streaming
