@@ -31,8 +31,10 @@ async def generate_rag_query(
     retrieving relevant information from the memory bank.
     """
     if config.type == RAGQueryGenerator.default.value:
+        assert isinstance(config, DefaultRAGQueryGeneratorConfig)
         query = await default_rag_query_generator(config, content, **kwargs)
     elif config.type == RAGQueryGenerator.llm.value:
+        assert isinstance(config, LLMRAGQueryGeneratorConfig)
         query = await llm_rag_query_generator(config, content, **kwargs)
     else:
         raise NotImplementedError(f"Unsupported memory query generator {config.type}")
