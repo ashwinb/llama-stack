@@ -5,9 +5,9 @@
 # the root directory of this source tree.
 
 
-import boto3
-from botocore.client import BaseClient
-from botocore.config import Config
+import boto3  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
+from botocore.client import BaseClient  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
+from botocore.config import Config  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
 
 from llama_stack.providers.utils.bedrock.config import BedrockBaseConfig
 from llama_stack.providers.utils.bedrock.refreshable_boto_session import (
@@ -67,7 +67,7 @@ def create_bedrock_client(config: BedrockBaseConfig, service_name: str = "bedroc
             RefreshableBotoSession(
                 region_name=config.region_name,
                 profile_name=config.profile_name,
-                session_ttl=config.session_ttl,
+                session_ttl=config.session_ttl or 30000,
             )
             .refreshable_session()
             .client(service_name)
