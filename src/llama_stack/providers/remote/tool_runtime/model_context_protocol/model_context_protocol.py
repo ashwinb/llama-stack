@@ -12,7 +12,6 @@ from llama_stack.log import get_logger
 from llama_stack.providers.utils.tools.mcp import invoke_mcp_tool, list_mcp_tools
 from llama_stack_api import (
     URL,
-    Api,
     ListToolDefsResponse,
     ToolGroup,
     ToolGroupsProtocolPrivate,
@@ -28,10 +27,10 @@ logger = get_logger(__name__, category="tools")
 class ModelContextProtocolToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsRequestProviderData):
     """Tool runtime for discovering and invoking tools via the Model Context Protocol."""
 
-    def __init__(self, config: MCPProviderConfig, _deps: dict[Api, Any]):
+    def __init__(self, config: MCPProviderConfig, _deps: dict[str, Any]) -> None:
         self.config = config
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         pass
 
     async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
@@ -58,10 +57,12 @@ class ModelContextProtocolToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime
     async def invoke_tool(
         self, tool_name: str, kwargs: dict[str, Any], authorization: str | None = None
     ) -> ToolInvocationResult:
+        if self.tool_store is None:
+            raise ValueError("Tool store is not initialized")
         tool = await self.tool_store.get_tool(tool_name)
         if tool.metadata is None or tool.metadata.get("endpoint") is None:
             raise ValueError(f"Tool {tool_name} does not have metadata")
-        endpoint = tool.metadata.get("endpoint")
+        endpoint: str = tool.metadata["endpoint"]
         if urlparse(endpoint).scheme not in ("http", "https"):
             raise ValueError(f"Endpoint {endpoint} is not a valid HTTP(S) URL")
 
