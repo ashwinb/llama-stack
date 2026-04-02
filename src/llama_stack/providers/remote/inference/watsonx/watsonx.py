@@ -35,6 +35,9 @@ WATSONX_API_VERSION = "2023-10-25"
 class WatsonXInferenceAdapter(OpenAIMixin):
     """Inference adapter for IBM WatsonX AI platform."""
 
+    config: WatsonXConfig  # narrowing from base RemoteInferenceProviderConfig
+    __provider_id__: str = ""  # injected at runtime by routing table
+
     _model_cache: dict[str, Model] = {}
 
     provider_data_api_key_field: str = "watsonx_api_key"

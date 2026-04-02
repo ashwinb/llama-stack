@@ -34,6 +34,7 @@ class OCIInferenceAdapter(OpenAIMixin):
     """Inference adapter for Oracle Cloud Infrastructure Generative AI."""
 
     config: OCIConfig
+    __provider_id__: str = ""  # injected at runtime by routing table
 
     embedding_models: list[str] = []
 
@@ -152,13 +153,13 @@ class OCIInferenceAdapter(OpenAIMixin):
         """
         if identifier in self.embedding_models:
             return Model(
-                provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+                provider_id=self.__provider_id__,
                 provider_resource_id=identifier,
                 identifier=identifier,
                 model_type=ModelType.embedding,
             )
         return Model(
-            provider_id=self.__provider_id__,  # type: ignore[attr-defined]
+            provider_id=self.__provider_id__,
             provider_resource_id=identifier,
             identifier=identifier,
             model_type=ModelType.llm,
