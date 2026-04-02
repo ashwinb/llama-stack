@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 import os
+from typing import Any
 
 from pydantic import BaseModel, Field, SecretStr
 
@@ -29,7 +30,7 @@ class BedrockConfig(RemoteInferenceProviderConfig):
     )
 
     @classmethod
-    def sample_run_config(cls, **kwargs):
+    def sample_run_config(cls, **kwargs: Any) -> dict[str, Any]:
         return {
             "api_key": "${env.AWS_BEARER_TOKEN_BEDROCK:=}",
             "region_name": "${env.AWS_DEFAULT_REGION:=us-east-2}",

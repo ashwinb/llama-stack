@@ -3,10 +3,12 @@
 #
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
+from typing import Any
+
 from .config import BedrockConfig
 
 
-async def get_adapter_impl(config: BedrockConfig, _deps):
+async def get_adapter_impl(config: BedrockConfig, _deps: dict[str, Any]) -> Any:
     from .bedrock import BedrockInferenceAdapter
 
     assert isinstance(config, BedrockConfig), f"Unexpected config type: {type(config)}"

@@ -32,6 +32,8 @@ logger = get_logger(__name__, category="inference")
 class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
     """Inference adapter that forwards requests to any OpenAI-compatible endpoint."""
 
+    __provider_id__: str = ""  # injected at runtime by the routing table
+
     def __init__(self, config: PassthroughImplConfig) -> None:
         self.config = config
 
@@ -156,7 +158,7 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         if params.stream:
             return wrap_async_stream(response)
 
-        return response  # type: ignore[return-value]
+        return response  # type: ignore[return-value]  # openai SDK returns compatible type
 
     async def openai_chat_completion(
         self,
@@ -170,7 +172,7 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         if params.stream:
             return wrap_async_stream(response)
 
-        return response  # type: ignore[return-value]
+        return response  # type: ignore[return-value]  # openai SDK returns compatible type
 
     async def openai_embeddings(
         self,
@@ -180,4 +182,4 @@ class PassthroughInferenceAdapter(NeedsRequestProviderData, Inference):
         client = self._get_openai_client()
         request_params = params.model_dump(exclude_none=True)
         response = await client.embeddings.create(**request_params)
-        return response  # type: ignore
+        return response  # ty: ignore[invalid-return-type]  # openai SDK returns compatible type
