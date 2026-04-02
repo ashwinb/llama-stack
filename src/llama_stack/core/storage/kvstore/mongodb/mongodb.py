@@ -6,8 +6,8 @@
 
 from datetime import datetime
 
-from pymongo import AsyncMongoClient
-from pymongo.asynchronous.collection import AsyncCollection
+from pymongo import AsyncMongoClient  # ty: ignore[unresolved-import]
+from pymongo.asynchronous.collection import AsyncCollection  # ty: ignore[unresolved-import]
 
 from llama_stack.core.storage.kvstore import KVStore
 from llama_stack.log import get_logger

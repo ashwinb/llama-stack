@@ -7,7 +7,7 @@
 import os
 from datetime import datetime
 
-import aiosqlite
+import aiosqlite  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 from llama_stack_api.internal.kvstore import KVStore

@@ -6,9 +6,9 @@
 
 from datetime import datetime
 
-import psycopg2  # type: ignore[import-not-found]
-from psycopg2.extensions import connection as PGConnection  # type: ignore[import-not-found]
-from psycopg2.extras import DictCursor  # type: ignore[import-not-found]
+import psycopg2  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
+from psycopg2.extensions import connection as PGConnection  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
+from psycopg2.extras import DictCursor  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 from llama_stack_api.internal.kvstore import KVStore
