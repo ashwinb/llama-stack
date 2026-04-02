@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 import json
+from typing import Any
 
 from llama_stack.log import get_logger
 from llama_stack.providers.utils.bedrock.client import create_bedrock_client
@@ -28,9 +29,12 @@ logger = get_logger(name=__name__, category="safety::bedrock")
 class BedrockSafetyAdapter(ShieldToModerationMixin, Safety, ShieldsProtocolPrivate):
     """Safety adapter for content moderation using AWS Bedrock Guardrails."""
 
+    bedrock_runtime_client: Any
+    bedrock_client: Any
+
     def __init__(self, config: BedrockSafetyConfig) -> None:
         self.config = config
-        self.registered_shields = []
+        self.registered_shields: list[Shield] = []
 
     async def initialize(self) -> None:
         try:
@@ -43,6 +47,8 @@ class BedrockSafetyAdapter(ShieldToModerationMixin, Safety, ShieldsProtocolPriva
         pass
 
     async def register_shield(self, shield: Shield) -> None:
+        if shield.params is None:
+            raise ValueError("Shield params must include 'guardrailVersion'")
         response = self.bedrock_client.list_guardrails(
             guardrailIdentifier=shield.provider_resource_id,
         )
@@ -63,10 +69,10 @@ class BedrockSafetyAdapter(ShieldToModerationMixin, Safety, ShieldsProtocolPriva
         if not shield:
             raise ValueError(f"Shield {request.shield_id} not found")
 
-        shield_params = shield.params
+        shield_params = shield.params or {}
         logger.debug("run_shield", shield_params=shield_params, messages=request.messages)
 
-        content_messages = []
+        content_messages: list[dict[str, dict[str, Any]]] = []
         for message in request.messages:
             content_messages.append({"text": {"text": message.content}})
         logger.debug("run_shield final messages", content_messages=json.dumps(content_messages, indent=2))

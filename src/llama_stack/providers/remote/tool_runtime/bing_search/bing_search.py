@@ -26,11 +26,11 @@ from .config import BingSearchToolConfig
 class BingSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsRequestProviderData):
     """Tool runtime for performing web searches using the Bing Search API."""
 
-    def __init__(self, config: BingSearchToolConfig):
+    def __init__(self, config: BingSearchToolConfig) -> None:
         self.config = config
         self.url = "https://api.bing.microsoft.com/v7.0/search"
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         pass
 
     async def register_toolgroup(self, toolgroup: ToolGroup) -> None:
@@ -99,8 +99,8 @@ class BingSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime, NeedsReq
 
         return ToolInvocationResult(content=json.dumps(self._clean_response(response.json())))
 
-    def _clean_response(self, search_response):
-        clean_response = []
+    def _clean_response(self, search_response: dict[str, Any]) -> dict[str, Any]:
+        clean_response: list[Any] = []
         query = search_response["queryContext"]["originalQuery"]
         if "webPages" in search_response:
             pages = search_response["webPages"]["value"]
