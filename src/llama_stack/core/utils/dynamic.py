@@ -5,9 +5,10 @@
 # the root directory of this source tree.
 
 import importlib
+from typing import Any
 
 
-def instantiate_class_type(fully_qualified_name):
+def instantiate_class_type(fully_qualified_name: str) -> Any:
     """Import and return a class from its fully qualified module path.
 
     Args:

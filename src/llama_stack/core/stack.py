@@ -11,7 +11,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
-from typing import Any, get_type_hints
+from typing import Any, cast, get_type_hints
 
 import yaml
 from pydantic import BaseModel
@@ -520,12 +520,13 @@ def replace_env_vars(config: Any, path: str = "") -> Any:
                 # Special handling for providers: first resolve the provider_id to check if provider
                 # is disabled so that we can skip config env variable expansion and avoid validation errors
                 if isinstance(v, dict) and "provider_id" in v:
+                    v_dict = cast(dict[str, Any], v)
                     try:
-                        resolved_provider_id = replace_env_vars(v["provider_id"], f"{path}[{i}].provider_id")
+                        resolved_provider_id = replace_env_vars(v_dict["provider_id"], f"{path}[{i}].provider_id")
                         if resolved_provider_id == "__disabled__":
                             logger.debug(
                                 "Skipping config env variable expansion for disabled provider",
-                                v_get_provider_id=v.get("provider_id", ""),
+                                v_get_provider_id=v_dict.get("provider_id", ""),
                             )
                             continue
                     except EnvVarError:
@@ -535,11 +536,12 @@ def replace_env_vars(config: Any, path: str = "") -> Any:
                 # Special handling for registered resources: check if ID field resolves to empty/None
                 # from conditional env vars (e.g., ${env.VAR:+value}) and skip the entry if so
                 if isinstance(v, dict):
+                    v_res = cast(dict[str, Any], v)
                     should_skip = False
                     for id_field in RESOURCE_ID_FIELDS:
-                        if id_field in v:
+                        if id_field in v_res:
                             try:
-                                resolved_id = replace_env_vars(v[id_field], f"{path}[{i}].{id_field}")
+                                resolved_id = replace_env_vars(v_res[id_field], f"{path}[{i}].{id_field}")
                                 if resolved_id is None or resolved_id == "":
                                     logger.debug(
                                         "Skipping [] with empty (conditional env var not set)",
@@ -698,7 +700,7 @@ def add_internal_implementations(impls: dict[Api, Any], config: StackConfig, pol
     impls[Api.connectors] = connectors_impl
 
 
-def _initialize_storage(run_config: StackConfig):
+def _initialize_storage(run_config: StackConfig) -> None:
     kv_backends: dict[str, StorageBackendConfig] = {}
     sql_backends: dict[str, StorageBackendConfig] = {}
     for backend_name, backend_config in run_config.storage.backends.items():
@@ -723,11 +725,11 @@ class Stack:
     def __init__(self, run_config: StackConfig, provider_registry: ProviderRegistry | None = None):
         self.run_config = run_config
         self.provider_registry = provider_registry
-        self.impls = None
+        self.impls: dict[Api, Any] | None = None
 
     # Produces a stack of providers for the given run config. Not all APIs may be
     # asked for in the run config.
-    async def initialize(self):
+    async def initialize(self) -> None:
         if "LLAMA_STACK_TEST_INFERENCE_MODE" in os.environ:
             from llama_stack.testing.api_recorder import setup_api_recording
 
@@ -741,7 +743,8 @@ class Stack:
         stores = self.run_config.storage.stores
         if not stores.metadata:
             raise ValueError("storage.stores.metadata must be configured with a kv_* backend")
-        dist_registry, _ = await create_dist_registry(stores.metadata, self.run_config.distro_name)
+        distro_name = self.run_config.distro_name or ""
+        dist_registry, _ = await create_dist_registry(stores.metadata, distro_name)
         policy = self.run_config.server.auth.access_policy if self.run_config.server.auth else []
 
         internal_impls = {}
@@ -770,7 +773,7 @@ class Stack:
         await validate_safety_config(self.run_config.safety, impls)
         self.impls = impls
 
-    def create_registry_refresh_task(self):
+    def create_registry_refresh_task(self) -> None:
         assert self.impls is not None, "Must call initialize() before starting"
 
         global REGISTRY_REFRESH_TASK
@@ -789,7 +792,9 @@ class Stack:
 
         REGISTRY_REFRESH_TASK.add_done_callback(cb)
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
+        if self.impls is None:
+            return
         for impl in self.impls.values():
             impl_name = impl.__class__.__name__
             logger.debug("Shutting down", impl_name=impl_name)
