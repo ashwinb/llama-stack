@@ -17,6 +17,8 @@ from llama_stack.core.distribution import (
     get_provider_registry,
 )
 from llama_stack.core.stack import cast_distro_name_to_string, replace_env_vars
+from pydantic import BaseModel
+
 from llama_stack.core.utils.dynamic import instantiate_class_type
 from llama_stack.core.utils.prompt_for_config import prompt_for_config
 from llama_stack.log import get_logger
@@ -37,6 +39,8 @@ def configure_single_provider(registry: dict[str, ProviderSpec], provider: Provi
     """
     provider_spec = registry[provider.provider_type]
     config_type = instantiate_class_type(provider_spec.config_class)
+    if not issubclass(config_type, BaseModel):
+        raise ValueError(f"Config class {provider_spec.config_class} is not a BaseModel subclass")
     try:
         if provider.config:
             existing = config_type(**provider.config)
