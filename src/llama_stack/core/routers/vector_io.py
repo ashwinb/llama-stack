@@ -97,7 +97,7 @@ class VectorIORouter(VectorIO):
         failure never blocks the actual operation.
         """
         try:
-            obj = self.routing_table.dist_registry.get_cached("vector_store", vector_store_id)
+            obj = self.routing_table.dist_registry.get_cached("vector_store", vector_store_id)  # ty: ignore[unresolved-attribute]
             if obj is None:
                 logger.warning("Vector store not found in registry cache", vector_store_id=vector_store_id)
                 return "unknown"
@@ -138,7 +138,7 @@ class VectorIORouter(VectorIO):
 
         try:
             response = await self.inference_api.openai_chat_completion(request)
-            content = response.choices[0].message.content
+            content = response.choices[0].message.content  # ty: ignore[unresolved-attribute]
             if content is None:
                 logger.error("LLM returned None content for query rewriting. Model", model_id=model_id)
                 raise RuntimeError("Query rewrite failed due to an internal error")
@@ -150,7 +150,7 @@ class VectorIORouter(VectorIO):
 
     async def _get_embedding_model_dimension(self, embedding_model_id: str) -> int:
         """Get the embedding dimension for a specific embedding model."""
-        all_models = await self.routing_table.get_all_with_type("model")
+        all_models = await self.routing_table.get_all_with_type("model")  # ty: ignore[unresolved-attribute]
 
         for model in all_models:
             if model.identifier == embedding_model_id and model.model_type == ModelType.embedding:
@@ -183,7 +183,7 @@ class VectorIORouter(VectorIO):
         )
 
         try:
-            result = await self.routing_table.insert_chunks(request)
+            result = await self.routing_table.insert_chunks(request)  # ty: ignore[unresolved-attribute]
             duration = time.perf_counter() - start_time
             success_attrs = {**metric_attrs, "status": "success"}
             vector_inserts_total.add(1, success_attrs)
@@ -220,7 +220,7 @@ class VectorIORouter(VectorIO):
         try:
             # Handle the no-filters case early
             if not request.params or "filters" not in request.params:
-                result = await self.routing_table.query_chunks(request)
+                result = await self.routing_table.query_chunks(request)  # ty: ignore[unresolved-attribute]
             else:
                 # Extract and parse filters from request params
                 params_copy = dict(request.params)
@@ -236,7 +236,7 @@ class VectorIORouter(VectorIO):
                 modified_request = QueryChunksRequest(
                     vector_store_id=request.vector_store_id, query=request.query, params=params_copy
                 )
-                result = await self.routing_table.query_chunks(modified_request)
+                result = await self.routing_table.query_chunks(modified_request)  # ty: ignore[unresolved-attribute]
 
             duration = time.perf_counter() - start_time
             success_attrs = {**metric_attrs, "status": "success"}
@@ -290,7 +290,7 @@ class VectorIORouter(VectorIO):
                 embedding_dimension = await self._get_embedding_model_dimension(embedding_model)
         # Validate that embedding model exists and is of the correct type
         if embedding_model is not None:
-            model = await self.routing_table.get_object_by_identifier("model", embedding_model)
+            model = await self.routing_table.get_object_by_identifier("model", embedding_model)  # ty: ignore[unresolved-attribute]
             if model is None:
                 raise ModelNotFoundError(embedding_model)
             if model.model_type != ModelType.embedding:
@@ -298,11 +298,11 @@ class VectorIORouter(VectorIO):
 
         # Auto-select provider if not specified
         if provider_id is None:
-            num_providers = len(self.routing_table.impls_by_provider_id)
+            num_providers = len(self.routing_table.impls_by_provider_id)  # ty: ignore[unresolved-attribute]
             if num_providers == 0:
                 raise ValueError("No vector_io providers available")
             if num_providers > 1:
-                available_providers = list(self.routing_table.impls_by_provider_id.keys())
+                available_providers = list(self.routing_table.impls_by_provider_id.keys())  # ty: ignore[unresolved-attribute]
                 # Use default configured provider
                 if self.vector_stores_config and self.vector_stores_config.default_provider_id:
                     default_provider = self.vector_stores_config.default_provider_id
@@ -320,10 +320,10 @@ class VectorIORouter(VectorIO):
                         f"Available providers: {available_providers}"
                     )
             else:
-                provider_id = list(self.routing_table.impls_by_provider_id.keys())[0]
+                provider_id = list(self.routing_table.impls_by_provider_id.keys())[0]  # ty: ignore[unresolved-attribute]
 
         vector_store_id = f"vs_{uuid.uuid4()}"
-        registered_vector_store = await self.routing_table.register_vector_store(
+        registered_vector_store = await self.routing_table.register_vector_store(  # ty: ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             embedding_model=embedding_model,
             embedding_dimension=embedding_dimension,
@@ -376,11 +376,11 @@ class VectorIORouter(VectorIO):
         logger.debug("VectorIORouter.openai_list_vector_stores", limit=limit)
         # Route to default provider for now - could aggregate from all providers in the future
         # call retrieve on each vector dbs to get list of vector stores
-        vector_stores = await self.routing_table.get_all_with_type("vector_store")
+        vector_stores = await self.routing_table.get_all_with_type("vector_store")  # ty: ignore[unresolved-attribute]
         all_stores = []
         for vector_store in vector_stores:
             try:
-                vector_store_obj = await self.routing_table.openai_retrieve_vector_store(vector_store.identifier)
+                vector_store_obj = await self.routing_table.openai_retrieve_vector_store(vector_store.identifier)  # ty: ignore[unresolved-attribute]
                 all_stores.append(vector_store_obj)
             except Exception as e:
                 logger.error("Error retrieving vector store", identifier=vector_store.identifier, error=str(e))
@@ -407,7 +407,7 @@ class VectorIORouter(VectorIO):
         limited_stores = all_stores[:limit]
 
         # Determine pagination info
-        has_more = len(all_stores) > limit
+        has_more = len(all_stores) > limit  # ty: ignore[unsupported-operator]
         first_id = limited_stores[0].id if limited_stores else None
         last_id = limited_stores[-1].id if limited_stores else None
 
@@ -423,7 +423,7 @@ class VectorIORouter(VectorIO):
         vector_store_id: str,
     ) -> VectorStoreObject:
         logger.debug("VectorIORouter.openai_retrieve_vector_store", vector_store_id=vector_store_id)
-        return await self.routing_table.openai_retrieve_vector_store(vector_store_id)
+        return await self.routing_table.openai_retrieve_vector_store(vector_store_id)  # ty: ignore[unresolved-attribute]
 
     async def openai_update_vector_store(
         self,
@@ -434,11 +434,11 @@ class VectorIORouter(VectorIO):
 
         # Check if provider_id is being changed (not supported)
         if request.metadata and "provider_id" in request.metadata:
-            current_store = await self.routing_table.get_object_by_identifier("vector_store", vector_store_id)
+            current_store = await self.routing_table.get_object_by_identifier("vector_store", vector_store_id)  # ty: ignore[unresolved-attribute]
             if current_store and current_store.provider_id != request.metadata["provider_id"]:
                 raise ValueError("provider_id cannot be changed after vector store creation")
 
-        return await self.routing_table.openai_update_vector_store(
+        return await self.routing_table.openai_update_vector_store(  # ty: ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             request=request,
         )
@@ -455,7 +455,7 @@ class VectorIORouter(VectorIO):
             provider=provider_id,
         )
         try:
-            result = await self.routing_table.openai_delete_vector_store(vector_store_id)
+            result = await self.routing_table.openai_delete_vector_store(vector_store_id)  # ty: ignore[unresolved-attribute]
             vector_deletes_total.add(1, {**metric_attrs, "status": "success"})
             return result
         except asyncio.CancelledError:
@@ -495,7 +495,7 @@ class VectorIORouter(VectorIO):
             forward_request.query = search_query
             forward_request.rewrite_query = False
 
-            result = await self.routing_table.openai_search_vector_store(
+            result = await self.routing_table.openai_search_vector_store(  # ty: ignore[unresolved-attribute]
                 vector_store_id=vector_store_id,
                 request=forward_request,
             )
@@ -548,7 +548,7 @@ class VectorIORouter(VectorIO):
             )
 
         try:
-            result = await self.routing_table.openai_attach_file_to_vector_store(
+            result = await self.routing_table.openai_attach_file_to_vector_store(  # ty: ignore[unresolved-attribute]
                 vector_store_id=vector_store_id,
                 request=params,
             )
@@ -583,7 +583,7 @@ class VectorIORouter(VectorIO):
         filter: VectorStoreFileStatus | None = None,
     ) -> VectorStoreListFilesResponse:
         logger.debug("VectorIORouter.openai_list_files_in_vector_store", vector_store_id=vector_store_id)
-        return await self.routing_table.openai_list_files_in_vector_store(
+        return await self.routing_table.openai_list_files_in_vector_store(  # ty: ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             limit=limit,
             order=order,
@@ -600,7 +600,7 @@ class VectorIORouter(VectorIO):
         logger.debug(
             "VectorIORouter.openai_retrieve_vector_store_file", vector_store_id=vector_store_id, file_id=file_id
         )
-        return await self.routing_table.openai_retrieve_vector_store_file(
+        return await self.routing_table.openai_retrieve_vector_store_file(  # ty: ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             file_id=file_id,
         )
@@ -620,7 +620,7 @@ class VectorIORouter(VectorIO):
             include_metadata=include_metadata,
         )
 
-        return await self.routing_table.openai_retrieve_vector_store_file_contents(
+        return await self.routing_table.openai_retrieve_vector_store_file_contents(  # ty: ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             file_id=file_id,
             include_embeddings=include_embeddings,
@@ -634,7 +634,7 @@ class VectorIORouter(VectorIO):
         request: OpenAIUpdateVectorStoreFileRequest,
     ) -> VectorStoreFileObject:
         logger.debug("VectorIORouter.openai_update_vector_store_file", vector_store_id=vector_store_id, file_id=file_id)
-        return await self.routing_table.openai_update_vector_store_file(
+        return await self.routing_table.openai_update_vector_store_file(  # ty: ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             file_id=file_id,
             request=request,
@@ -653,7 +653,7 @@ class VectorIORouter(VectorIO):
             provider=provider_id,
         )
         try:
-            result = await self.routing_table.openai_delete_vector_store_file(
+            result = await self.routing_table.openai_delete_vector_store_file(  # ty: ignore[unresolved-attribute]
                 vector_store_id=vector_store_id,
                 file_id=file_id,
             )
@@ -669,7 +669,7 @@ class VectorIORouter(VectorIO):
     async def health(self) -> dict[str, HealthResponse]:
         health_statuses = {}
         timeout = 1  # increasing the timeout to 1 second for health checks
-        for provider_id, impl in self.routing_table.impls_by_provider_id.items():
+        for provider_id, impl in self.routing_table.impls_by_provider_id.items():  # ty: ignore[unresolved-attribute]
             try:
                 # check if the provider has a health method
                 if not hasattr(impl, "health"):
@@ -699,7 +699,7 @@ class VectorIORouter(VectorIO):
             vector_store_id=vector_store_id,
             file_ids_count=len(params.file_ids),
         )
-        return await self.routing_table.openai_create_vector_store_file_batch(
+        return await self.routing_table.openai_create_vector_store_file_batch(  # ty: ignore[unresolved-attribute]
             vector_store_id=vector_store_id,
             params=params,
         )
@@ -712,7 +712,7 @@ class VectorIORouter(VectorIO):
         logger.debug(
             "VectorIORouter.openai_retrieve_vector_store_file_batch", batch_id=batch_id, vector_store_id=vector_store_id
         )
-        return await self.routing_table.openai_retrieve_vector_store_file_batch(
+        return await self.routing_table.openai_retrieve_vector_store_file_batch(  # ty: ignore[unresolved-attribute]
             batch_id=batch_id,
             vector_store_id=vector_store_id,
         )
@@ -732,7 +732,7 @@ class VectorIORouter(VectorIO):
             batch_id=batch_id,
             vector_store_id=vector_store_id,
         )
-        return await self.routing_table.openai_list_files_in_vector_store_file_batch(
+        return await self.routing_table.openai_list_files_in_vector_store_file_batch(  # ty: ignore[unresolved-attribute]
             batch_id=batch_id,
             vector_store_id=vector_store_id,
             after=after,
@@ -750,7 +750,7 @@ class VectorIORouter(VectorIO):
         logger.debug(
             "VectorIORouter.openai_cancel_vector_store_file_batch", batch_id=batch_id, vector_store_id=vector_store_id
         )
-        return await self.routing_table.openai_cancel_vector_store_file_batch(
+        return await self.routing_table.openai_cancel_vector_store_file_batch(  # ty: ignore[unresolved-attribute]
             batch_id=batch_id,
             vector_store_id=vector_store_id,
         )
