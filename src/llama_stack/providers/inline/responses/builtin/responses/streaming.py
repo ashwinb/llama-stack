@@ -427,7 +427,7 @@ class StreamingResponseOrchestrator:
         chat_tool_choice = None
         # Track allowed tools for filtering (persists across iterations)
         allowed_tool_names: set[str] | None = None
-        if self.ctx.tool_choice and len(self.ctx.chat_tools) > 0:
+        if self.ctx.tool_choice and self.ctx.chat_tools and len(self.ctx.chat_tools) > 0:
             processed_tool_choice = await _process_tool_choice(
                 self.ctx.chat_tools,
                 self.ctx.tool_choice,
@@ -485,7 +485,7 @@ class StreamingResponseOrchestrator:
                 )
                 # Filter tools to only allowed ones if tool_choice specified an allowed list
                 effective_tools = self.ctx.chat_tools
-                if allowed_tool_names is not None:
+                if allowed_tool_names is not None and self.ctx.chat_tools is not None:
                     effective_tools = [
                         tool
                         for tool in self.ctx.chat_tools
@@ -514,7 +514,7 @@ class StreamingResponseOrchestrator:
                     model=self.ctx.model,
                     messages=messages,
                     # Pydantic models are dict-compatible but mypy treats them as distinct types
-                    tools=effective_tools,  # type: ignore[arg-type]
+                    tools=effective_tools,  # ty: ignore[invalid-argument-type]
                     tool_choice=chat_tool_choice,
                     stream=True,
                     temperature=self.ctx.temperature,
@@ -526,7 +526,7 @@ class StreamingResponseOrchestrator:
                     parallel_tool_calls=effective_parallel_tool_calls,
                     reasoning_effort=self.reasoning.effort if self.reasoning else None,
                     safety_identifier=self.safety_identifier,
-                    service_tier=self.service_tier,
+                    service_tier=self.service_tier,  # ty: ignore[invalid-argument-type]  # ServiceTier is a str enum
                     max_completion_tokens=remaining_output_tokens,
                     prompt_cache_key=self.prompt_cache_key,
                     top_logprobs=self.top_logprobs,
@@ -1245,7 +1245,7 @@ class StreamingResponseOrchestrator:
             message_item_id=message_item_id,
             tool_call_item_ids=tool_call_item_ids,
             content_part_emitted=content_part_emitted,
-            logprobs=OpenAIChoiceLogprobs(content=chat_response_logprobs) if chat_response_logprobs else None,
+            logprobs=chat_response_logprobs or None,
             service_tier=chunk_service_tier,
         )
 
@@ -1259,7 +1259,7 @@ class StreamingResponseOrchestrator:
 
         assistant_message = OpenAIChatCompletionResponseMessage(
             content=result.content_text,
-            tool_calls=tool_calls,
+            tool_calls=tool_calls,  # ty: ignore[invalid-argument-type]  # list[ToolCall] is subset of list[ToolCall | CustomToolCall]
         )
         return OpenAIChatCompletion(
             id=result.response_id,
@@ -1268,7 +1268,7 @@ class StreamingResponseOrchestrator:
                     message=assistant_message,
                     finish_reason=result.finish_reason,
                     index=0,
-                    logprobs=result.logprobs,
+                    logprobs=OpenAIChoiceLogprobs(content=result.logprobs) if result.logprobs else None,
                 )
             ],
             created=result.created,
@@ -1418,12 +1418,12 @@ class StreamingResponseOrchestrator:
     ) -> AsyncIterator[OpenAIResponseObjectStream]:
         """Process all tools and emit appropriate streaming events."""
 
-        def make_openai_tool(tool_name: str, tool: ToolDef) -> ChatCompletionToolParam:
+        def make_openai_tool(tool_name: str, tool: ToolDef) -> ChatCompletionToolParam:  # convert_tooldef returns dict compatible with ChatCompletionToolParam
             return convert_tooldef_to_openai_tool(
                 tool_name=tool_name,
                 description=tool.description,
                 input_schema=tool.input_schema,
-            )  # type: ignore[return-value]  # Returns dict but ChatCompletionToolParam expects TypedDict
+            )  # ty: ignore[invalid-return-type]  # Returns dict but ChatCompletionToolParam expects TypedDict
 
         # Initialize chat_tools if not already set
         if self.ctx.chat_tools is None:
@@ -1459,6 +1459,7 @@ class StreamingResponseOrchestrator:
                 )
                 self.ctx.chat_tools.append(make_openai_tool(tool_name, file_search_tool_def))
             elif input_tool.type == "mcp":
+                assert isinstance(input_tool, OpenAIResponseInputToolMCP)
                 async for stream_event in self._process_mcp_tool(input_tool, output_messages):
                     yield stream_event
             else:
@@ -1469,6 +1470,7 @@ class StreamingResponseOrchestrator:
     ) -> AsyncIterator[OpenAIResponseObjectStream]:
         """Process an MCP tool configuration and emit appropriate streaming events."""
         # Resolve connector_id to server_url if provided
+        assert self.connectors_api is not None, "connectors_api is required for MCP tools"
         mcp_tool = await resolve_mcp_connector_id(mcp_tool, self.connectors_api)
 
         # Emit mcp_list_tools.in_progress
@@ -1490,9 +1492,11 @@ class StreamingResponseOrchestrator:
             # Call list_mcp_tools
             tool_defs = None
             list_id = f"mcp_list_{uuid.uuid4()}"
-            attributes = {
+            assert mcp_tool.server_url is not None, "MCP tool must have server_url after connector resolution"
+            server_url = mcp_tool.server_url
+            attributes: dict[str, str] = {
                 "server_label": mcp_tool.server_label,
-                "server_url": mcp_tool.server_url,
+                "server_url": server_url,
                 "mcp_list_tools_id": list_id,
             }
 
@@ -1503,7 +1507,7 @@ class StreamingResponseOrchestrator:
             # https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/#execute-tool-span
             with tracer.start_as_current_span("list_mcp_tools", attributes=attributes):
                 tool_defs = await list_mcp_tools(
-                    endpoint=mcp_tool.server_url,
+                    endpoint=server_url,
                     headers=mcp_tool.headers,
                     authorization=mcp_tool.authorization,
                     session_manager=session_manager,
@@ -1525,7 +1529,7 @@ class StreamingResponseOrchestrator:
                     openai_tool = convert_tooldef_to_chat_tool(t)
                     if self.ctx.chat_tools is None:
                         self.ctx.chat_tools = []
-                    self.ctx.chat_tools.append(openai_tool)  # type: ignore[arg-type]  # Returns dict but ChatCompletionToolParam expects TypedDict
+                    self.ctx.chat_tools.append(openai_tool)  # Returns dict but ChatCompletionToolParam expects TypedDict
 
                     # Add to MCP tool mapping
                     if t.name in self.mcp_tool_to_server:
@@ -1660,7 +1664,7 @@ class StreamingResponseOrchestrator:
             )
             if self.ctx.chat_tools is None:
                 self.ctx.chat_tools = []
-            self.ctx.chat_tools.append(openai_tool)  # type: ignore[arg-type]  # Returns dict but ChatCompletionToolParam expects TypedDict
+            self.ctx.chat_tools.append(openai_tool)  # ty: ignore[invalid-argument-type]  # Returns dict but ChatCompletionToolParam expects TypedDict
 
         mcp_list_message = OpenAIResponseOutputMessageMCPListTools(
             id=f"mcp_list_{uuid.uuid4()}",
@@ -1737,19 +1741,19 @@ async def _process_tool_choice(
     else:
         # Handle specific tool choice by type
         # Each case validates the tool exists in chat_tools before returning
-        tool_name = getattr(tool_choice, "name", None)
+        tool_name: str | None = getattr(tool_choice, "name", None)
         match tool_choice:
             case OpenAIResponseInputToolChoiceCustomTool():
                 if tool_name and tool_name not in chat_tool_names:
                     logger.warning("Tool not found in chat tools", tool_name=tool_name)
                     return None
-                return OpenAIChatCompletionToolChoiceCustomTool(name=tool_name)
+                return OpenAIChatCompletionToolChoiceCustomTool(name=tool_name or "")
 
             case OpenAIResponseInputToolChoiceFunctionTool():
                 if tool_name and tool_name not in chat_tool_names:
                     logger.warning("Tool not found in chat tools", tool_name=tool_name)
                     return None
-                return OpenAIChatCompletionToolChoiceFunctionTool(name=tool_name)
+                return OpenAIChatCompletionToolChoiceFunctionTool(name=tool_name or "")
 
             case OpenAIResponseInputToolChoiceFileSearch():
                 if "file_search" not in chat_tool_names:
@@ -1764,19 +1768,21 @@ async def _process_tool_choice(
                 return OpenAIChatCompletionToolChoiceFunctionTool(name="web_search")
 
             case OpenAIResponseInputToolChoiceMCPTool():
-                tool_choice = convert_mcp_tool_choice(
+                mcp_choice = convert_mcp_tool_choice(
                     chat_tool_names,
                     tool_choice.server_label,
                     server_label_to_tools,
                     tool_name,
                 )
-                if isinstance(tool_choice, dict):
+                if isinstance(mcp_choice, dict):
                     # for single tool choice, return as function tool choice
-                    return OpenAIChatCompletionToolChoiceFunctionTool(name=tool_choice["function"]["name"])
-                elif isinstance(tool_choice, list):
+                    func_val = mcp_choice["function"]
+                    func_name = func_val["name"] if isinstance(func_val, dict) else func_val
+                    return OpenAIChatCompletionToolChoiceFunctionTool(name=str(func_name))
+                elif isinstance(mcp_choice, list):
                     # for multiple tool choices, return as allowed tools
                     return OpenAIChatCompletionToolChoiceAllowedTools(
-                        tools=tool_choice,
+                        tools=mcp_choice,
                         mode="required",
                     )
 

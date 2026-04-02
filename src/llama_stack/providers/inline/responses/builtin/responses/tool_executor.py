@@ -160,24 +160,24 @@ class ToolExecutor:
             search_results.extend(results)
 
         # Get templates from vector stores config, fallback to constants
+        effective_config = self.vector_stores_config or VectorStoresConfig()
 
         # Check if annotations are enabled
         enable_annotations = (
-            self.vector_stores_config
-            and self.vector_stores_config.annotation_prompt_params
-            and self.vector_stores_config.annotation_prompt_params.enable_annotations
+            effective_config.annotation_prompt_params
+            and effective_config.annotation_prompt_params.enable_annotations
         )
 
         # Get templates
-        header_template = self.vector_stores_config.file_search_params.header_template
-        footer_template = self.vector_stores_config.file_search_params.footer_template
-        context_template = self.vector_stores_config.context_prompt_params.context_template
+        header_template = effective_config.file_search_params.header_template
+        footer_template = effective_config.file_search_params.footer_template
+        context_template = effective_config.context_prompt_params.context_template
 
         # Get annotation templates (use defaults if annotations disabled)
         if enable_annotations:
-            chunk_annotation_template = self.vector_stores_config.annotation_prompt_params.chunk_annotation_template
+            chunk_annotation_template = effective_config.annotation_prompt_params.chunk_annotation_template
             annotation_instruction_template = (
-                self.vector_stores_config.annotation_prompt_params.annotation_instruction_template
+                effective_config.annotation_prompt_params.annotation_instruction_template
             )
         else:
             # Use defaults from VectorStoresConfig when annotations disabled
@@ -328,9 +328,11 @@ class ToolExecutor:
                 from llama_stack.providers.utils.tools.mcp import invoke_mcp_tool
 
                 mcp_tool = mcp_tool_to_server[function_name]
-                attributes = {
+                assert mcp_tool.server_url is not None, "MCP tool must have server_url"
+                mcp_server_url = mcp_tool.server_url
+                attributes: dict[str, str] = {
                     "server_label": mcp_tool.server_label,
-                    "server_url": mcp_tool.server_url,
+                    "server_url": mcp_server_url,
                     "tool_name": function_name,
                 }
                 # TODO: follow semantic conventions for Open Telemetry tool spans
@@ -338,7 +340,7 @@ class ToolExecutor:
                 with tracer.start_as_current_span("invoke_mcp_tool", attributes=attributes):
                     # Pass session_manager for session reuse within request (fix for #4452)
                     result = await invoke_mcp_tool(
-                        endpoint=mcp_tool.server_url,
+                        endpoint=mcp_server_url,
                         tool_name=function_name,
                         kwargs=tool_kwargs,
                         headers=mcp_tool.headers,
