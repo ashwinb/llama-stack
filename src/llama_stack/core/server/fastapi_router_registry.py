@@ -11,7 +11,7 @@ APIs with routers are explicitly listed here.
 """
 
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any
 
 from fastapi import APIRouter
 from fastapi.routing import APIRoute
@@ -96,10 +96,10 @@ def build_fastapi_router(api: "Api", impl: Any) -> APIRouter | None:
     if router_factory is None:
         return None
 
-    # cast is safe here: all router factories in API packages are required to return APIRouter.
+    # Router factories in API packages are required to return APIRouter.
     # If a router factory returns the wrong type, it will fail at runtime when
     # app.include_router(router) is called
-    return cast(APIRouter, router_factory(impl))
+    return router_factory(impl)  # type: ignore[return-value]
 
 
 def get_router_routes(router: APIRouter) -> list[APIRoute]:

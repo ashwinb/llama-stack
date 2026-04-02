@@ -154,7 +154,7 @@ class AuthenticationMiddleware:
             logger.debug(
                 "Authentication successful: with attributes",
                 principal=validation_result.principal,
-                attributes_count=len(validation_result.attributes),
+                attributes_count=len(validation_result.attributes) if validation_result.attributes else 0,
             )
 
         return await self.app(scope, receive, send)
