@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 import os
+from typing import Any
 
 from pydantic import Field, SecretStr
 
@@ -62,5 +63,5 @@ class BedrockBaseConfig(RemoteInferenceProviderConfig):
     )
 
     @classmethod
-    def sample_run_config(cls, **kwargs):
+    def sample_run_config(cls, **kwargs: Any) -> dict[str, Any]:
         return {}

@@ -298,23 +298,24 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
         return False
 
     async def register_model(self, model: Model) -> Model:
+        model_resource_id = model.provider_resource_id or model.model_id
         # Check if model is supported in static configuration
-        supported_model_id = self.get_provider_model_id(model.provider_resource_id)
+        supported_model_id = self.get_provider_model_id(model_resource_id)
 
         # If not found in static config, check if it's available dynamically from provider
         if not supported_model_id:
-            if await self.check_model_availability(model.provider_resource_id):
-                supported_model_id = model.provider_resource_id
+            if await self.check_model_availability(model_resource_id):
+                supported_model_id = model_resource_id
             else:
                 # note: we cannot provide a complete list of supported models without
                 #       getting a complete list from the provider, so we return "..."
                 all_supported_models = [*self.alias_to_provider_id_map.keys(), "..."]
-                raise UnsupportedModelError(model.provider_resource_id, all_supported_models)
+                raise UnsupportedModelError(model_resource_id, all_supported_models)
 
         provider_resource_id = self.get_provider_model_id(model.model_id)
         if model.model_type == ModelType.embedding:
             # embedding models are always registered by their provider model id and does not need to be mapped to a llama model
-            provider_resource_id = model.provider_resource_id
+            provider_resource_id = model_resource_id
         if provider_resource_id:
             if provider_resource_id != supported_model_id:  # be idempotent, only reject differences
                 raise ValueError(
@@ -323,7 +324,7 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
         else:
             llama_model = model.metadata.get("llama_model")
             if llama_model:
-                existing_llama_model = self.get_llama_model(model.provider_resource_id)
+                existing_llama_model = self.get_llama_model(model_resource_id)
                 if existing_llama_model:
                     if existing_llama_model != llama_model:
                         raise ValueError(
@@ -331,11 +332,12 @@ class ModelRegistryHelper(ModelsProtocolPrivate):
                         )
                 else:
                     if llama_model not in ALL_HUGGINGFACE_REPOS_TO_MODEL_DESCRIPTOR:
+                        valid_keys = [k for k in ALL_HUGGINGFACE_REPOS_TO_MODEL_DESCRIPTOR if k is not None]
                         raise ValueError(
                             f"Invalid llama_model '{llama_model}' specified in metadata. "
-                            f"Must be one of: {', '.join(ALL_HUGGINGFACE_REPOS_TO_MODEL_DESCRIPTOR.keys())}"
+                            f"Must be one of: {', '.join(valid_keys)}"
                         )
-                    self.provider_id_to_llama_model_map[model.provider_resource_id] = (
+                    self.provider_id_to_llama_model_map[model_resource_id] = (
                         ALL_HUGGINGFACE_REPOS_TO_MODEL_DESCRIPTOR[llama_model]
                     )
 

@@ -5,9 +5,9 @@
 # the root directory of this source tree.
 
 
-import boto3
-from botocore.client import BaseClient
-from botocore.config import Config
+import boto3  # type: ignore[import-untyped] # ty: ignore[unresolved-import]
+from botocore.client import BaseClient  # type: ignore[import-untyped] # ty: ignore[unresolved-import]
+from botocore.config import Config  # type: ignore[import-untyped] # ty: ignore[unresolved-import]
 
 from llama_stack.providers.utils.bedrock.config import BedrockBaseConfig
 from llama_stack.providers.utils.bedrock.refreshable_boto_session import (
