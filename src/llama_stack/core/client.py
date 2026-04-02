@@ -13,7 +13,7 @@ from typing import Any, Union, get_args, get_origin
 
 import httpx
 from pydantic import BaseModel, parse_obj_as
-from termcolor import cprint
+from termcolor import cprint  # ty: ignore[unresolved-import]
 
 from llama_stack_api import RemoteProviderConfig
 

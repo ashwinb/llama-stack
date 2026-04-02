@@ -7,7 +7,7 @@
 import sys
 
 from pydantic import BaseModel
-from termcolor import cprint
+from termcolor import cprint  # ty: ignore[unresolved-import]
 
 from llama_stack.core.datatypes import StackConfig
 from llama_stack.core.distribution import get_provider_registry
@@ -42,7 +42,7 @@ def get_provider_dependencies(
 ) -> tuple[list[str], list[str], list[str]]:
     """Get normal and special dependencies from provider configuration."""
     if isinstance(config, DistributionTemplate):
-        config = config.build_config()
+        config = config.build_config()  # ty: ignore[unresolved-attribute]
 
     deps = []
     external_provider_deps = []

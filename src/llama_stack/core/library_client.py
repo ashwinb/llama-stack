@@ -24,7 +24,7 @@ from fastapi import Response as FastAPIResponse
 from llama_stack.core.utils.type_inspection import is_body_param, is_unwrapped_body_param
 
 try:
-    from llama_stack_client import (
+    from llama_stack_client import (  # ty: ignore[unresolved-import]
         NOT_GIVEN,
         APIResponse,
         AsyncAPIResponse,
@@ -39,7 +39,7 @@ except ImportError as e:
 
 from pydantic import BaseModel, TypeAdapter
 from rich.console import Console
-from termcolor import cprint
+from termcolor import cprint  # ty: ignore[unresolved-import]
 
 from llama_stack.core.build import print_pip_install_help
 from llama_stack.core.configure import parse_and_maybe_upgrade_config
@@ -272,7 +272,7 @@ class AsyncLlamaStackAsLibraryClient(AsyncLlamaStackClient):
         # Initialize logging from environment variables first
         setup_logging()
         if in_notebook():  # type: ignore[no-untyped-call]
-            import nest_asyncio
+            import nest_asyncio  # ty: ignore[unresolved-import]
 
             nest_asyncio.apply()
             if not skip_logger_removal:
