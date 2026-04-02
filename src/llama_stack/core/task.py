@@ -5,7 +5,7 @@
 # the root directory of this source tree.
 
 import asyncio
-from collections.abc import Coroutine
+from collections.abc import Coroutine, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
@@ -40,7 +40,7 @@ def capture_request_context() -> RequestContext:
 
 
 @contextmanager
-def activate_request_context(ctx: RequestContext):
+def activate_request_context(ctx: RequestContext) -> Generator[None, None, None]:
     """Temporarily restore a previously captured request context.
 
     Use this in worker loops that run with a detached (empty) context to

@@ -5,6 +5,7 @@
 # the root directory of this source tree.
 
 import importlib
+import importlib.resources
 import os
 import signal
 import subprocess
@@ -17,7 +18,7 @@ from llama_stack.log import get_logger
 log = get_logger(name=__name__, category="core")
 
 
-def formulate_run_args(image_type: str, distro_name: str) -> list:
+def formulate_run_args(image_type: str, distro_name: str) -> list[str]:
     """Build the command-line arguments for starting a Llama Stack server.
 
     Args:
@@ -40,7 +41,7 @@ def formulate_run_args(image_type: str, distro_name: str) -> list:
 
     cprint(f"Using virtual environment: {env_name}", file=sys.stderr)
 
-    script = importlib.resources.files("llama_stack") / "core/start_stack.sh"
+    script = str(importlib.resources.files("llama_stack") / "core/start_stack.sh")
     run_args = [
         script,
         image_type,
@@ -50,7 +51,7 @@ def formulate_run_args(image_type: str, distro_name: str) -> list:
     return run_args
 
 
-def in_notebook():
+def in_notebook() -> bool:
     """Detect whether the current code is running inside a Jupyter notebook.
 
     Returns:
