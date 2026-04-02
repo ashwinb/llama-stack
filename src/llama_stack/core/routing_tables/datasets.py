@@ -50,9 +50,9 @@ class DatasetsRoutingTable(CommonRoutingTableImpl, Datasets):
         dataset_id = request.dataset_id
         if isinstance(source, dict):
             if source["type"] == "uri":
-                source = URIDataSource.parse_obj(source)
+                source = URIDataSource.model_validate(source)
             elif source["type"] == "rows":
-                source = RowsDataSource.parse_obj(source)
+                source = RowsDataSource.model_validate(source)
 
         if not dataset_id:
             dataset_id = f"dataset-{str(uuid.uuid4())}"
