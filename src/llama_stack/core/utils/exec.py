@@ -11,7 +11,7 @@ import signal
 import subprocess
 import sys
 
-from termcolor import cprint
+from termcolor import cprint  # ty: ignore[unresolved-import]
 
 from llama_stack.log import get_logger
 
