@@ -5,7 +5,7 @@
 # the root directory of this source tree.
 
 import httpx
-import litellm
+import litellm  # ty: ignore[unresolved-import]
 
 from llama_stack.core.request_headers import NeedsRequestProviderData
 from llama_stack.log import get_logger
@@ -63,6 +63,8 @@ class SambaNovaSafetyAdapter(ShieldToModerationMixin, Safety, ShieldsProtocolPri
             except httpx.HTTPError as e:
                 raise RuntimeError(f"Request to {list_models_url} failed") from e
             self.environment_available_models = [model.get("id") for model in response.json().get("data", {})]
+        if not shield.provider_resource_id:
+            raise ValueError("Shield must have a provider_resource_id")
         if (
             "guard" not in shield.provider_resource_id.lower()
             or shield.provider_resource_id.split("sambanova/")[-1] not in self.environment_available_models

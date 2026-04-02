@@ -4,12 +4,19 @@
 # This source code is licensed under the terms described in the LICENSE file in
 # the root directory of this source tree.
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from llama_stack.core.datatypes import Api
 
 from .config import LlamaGuardConfig
 
+if TYPE_CHECKING:
+    from .llama_guard import LlamaGuardSafetyImpl
 
-async def get_provider_impl(config: LlamaGuardConfig, deps: dict[str, Any]):
+
+async def get_provider_impl(config: LlamaGuardConfig, deps: dict[Api, Any]) -> LlamaGuardSafetyImpl:
     from .llama_guard import LlamaGuardSafetyImpl
 
     assert isinstance(config, LlamaGuardConfig), f"Unexpected config type: {type(config)}"
