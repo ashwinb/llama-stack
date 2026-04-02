@@ -82,7 +82,7 @@ class ToolGroupsRoutingTable(CommonRoutingTableImpl, ToolGroups):
                     # Other errors that the client cannot fix are logged and
                     # those specific toolgroups are skipped.
                     logger.warning("Error listing tools for toolgroup", identifier=toolgroup.identifier, error=str(e))
-                    logger.debug(e, exc_info=True)  # ty: ignore[invalid-argument-type]
+                    logger.debug(e, exc_info=True)
                     continue
             all_tools.extend(self.toolgroups_to_tools[toolgroup.identifier])
 

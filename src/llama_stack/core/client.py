@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any, Union, get_args, get_origin
 
 import httpx
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel, TypeAdapter
 from termcolor import cprint  # ty: ignore[unresolved-import]
 
 from llama_stack_api import RemoteProviderConfig
@@ -96,7 +96,7 @@ def create_api_client_class(protocol: type) -> type:
                     return None
                 # print(f"({protocol.__name__}) Returning {j}, type {return_type}")
                 assert return_type is not None
-                return parse_obj_as(return_type, j)  # type: ignore[deprecated]
+                return TypeAdapter(return_type).validate_python(j)
 
         async def _call_streaming(self, method_name: str, *args, **kwargs) -> Any:
             webmethod, sig = self.routes[method_name]
@@ -118,7 +118,7 @@ def create_api_client_class(protocol: type) -> type:
                                     cprint(data, color="red", file=sys.stderr)
                                     continue
 
-                                yield parse_obj_as(return_type, data)
+                                yield TypeAdapter(return_type).validate_python(data)
                             except Exception as e:
                                 cprint(f"Error with parsing or validation: {e}", color="red", file=sys.stderr)
                                 cprint(data, color="red", file=sys.stderr)
