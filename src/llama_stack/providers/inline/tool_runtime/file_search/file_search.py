@@ -57,8 +57,8 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             raise ValueError("file:// URIs are not supported. Please use the Files API (/v1/files) to upload files.")
         if uri.startswith("data:"):
             parts = parse_data_url(uri)
-            mime_type = parts["mimetype"]
-            data = parts["data"]
+            mime_type = str(parts["mimetype"] or "application/octet-stream")
+            data = str(parts["data"] or "")
 
             if parts["is_base64"]:
                 file_data = base64.b64decode(data)
@@ -82,8 +82,8 @@ async def raw_data_from_doc(doc: RAGDocument) -> tuple[bytes, str]:
             raise ValueError("file:// URIs are not supported. Please use the Files API (/v1/files) to upload files.")
         if content_str.startswith("data:"):
             parts = parse_data_url(content_str)
-            mime_type = parts["mimetype"]
-            data = parts["data"]
+            mime_type = str(parts["mimetype"] or "application/octet-stream")
+            data = str(parts["data"] or "")
 
             if parts["is_base64"]:
                 file_data = base64.b64decode(data)
@@ -239,7 +239,7 @@ class FileSearchToolRuntimeImpl(ToolGroupsProtocolPrivate, ToolRuntime):
             return RAGQueryResult(content=None)
 
         # sort by score
-        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)  # type: ignore
+        chunks, scores = zip(*sorted(zip(chunks, scores, strict=False), key=lambda x: x[1], reverse=True), strict=False)
         chunks = chunks[: query_config.max_chunks]
 
         tokens = 0
